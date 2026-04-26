@@ -7,7 +7,6 @@ import dev.blitical.jigsawDB.table.Table;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.type.TypeMirror;
-import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -29,24 +28,10 @@ public final class Encoder {
             return field.getAnnotation(Parse.class).value();
         }
 
-        Class<?> typeClass;
-        if (type instanceof AnnotatedParameterizedType apt) {
-            typeClass = (Class<?>) ((ParameterizedType) apt.getType()).getRawType();
-        } else if (type.getType() instanceof Class<?> clazz) {
-            typeClass = clazz;
-        } else {
-            typeClass = Object.class;
-        }
-
-        if (typeClass.getDeclaredAnnotation(Parse.class) != null) {
-            return typeClass.getDeclaredAnnotation(Parse.class).value();
-        }
-
-        for (Map.Entry<ParseType, Class<?>[]> entry : PREDEFINED_TYPES.entrySet()) {
-            for (Class<?> clazz : entry.getValue()) {
-                if (clazz.equals(typeClass))
-                    return entry.getKey();
-            }
+        Class<?> typeClass = extractRawType(type);
+        Parse typeAnnotation = typeClass.getDeclaredAnnotation(Parse.class);
+        if (typeAnnotation != null) {
+            return typeAnnotation.value();
         }
 
         if (typeClass.isEnum()) {
@@ -57,7 +42,26 @@ public final class Encoder {
             return ParseType.UUID_STRING;
         }
 
+        for (Map.Entry<ParseType, Class<?>[]> entry : PREDEFINED_TYPES.entrySet()) {
+            for (Class<?> clazz : entry.getValue()) {
+                if (clazz.isAssignableFrom(typeClass))
+                    return entry.getKey();
+            }
+        }
+
         return ParseType.JSON;
+    }
+
+    private static Class<?> extractRawType(AnnotatedType type) {
+        if (type.getType() instanceof Class<?> clazz) {
+            return clazz;
+        }
+
+        if (type.getType() instanceof ParameterizedType pt) {
+            return (Class<?>) pt.getRawType();
+        }
+
+        return Object.class;
     }
 
     public static EncodedType resolveEncodedType(Field field) {

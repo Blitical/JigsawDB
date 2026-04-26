@@ -173,4 +173,10 @@ public final class CacheHandler {
 
         return result.toArray(new Field[0]);
     }
+
+    public static CachedMap getCachedMap(
+            ConnectedDatabase.Exposed __ // Require this so random no-names can't call this
+    ) {
+        return CACHE;
+    }
 }

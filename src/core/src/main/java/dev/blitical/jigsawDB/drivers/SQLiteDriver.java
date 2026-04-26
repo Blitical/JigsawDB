@@ -355,11 +355,8 @@ public class SQLiteDriver extends Driver {
 
             while (rs.next()) {
                 P primaryKey = (P) rs.getObject(table.getPrimaryColumnName());
-
-                for (Field<T, ?> field : fields) {
-                    putCachedValue(database, table, primaryKey, field, rs.getObject(field.name()));
-                }
-
+                for (Field<T, ?> field : fields)
+                    putCachedValue(database, table, primaryKey, field, Encoder.decode(rs.getObject(field.name()), table, field));
                 result.add(new Entry<>(database, table, primaryKey));
             }
 

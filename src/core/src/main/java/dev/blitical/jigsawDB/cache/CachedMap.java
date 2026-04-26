@@ -17,7 +17,7 @@ public class CachedMap {
             Map<String, // Table id
                     Map<Object, // Entry Primary Key
                             Map<String, // Column id
-                                    CachedValue<Object> // Value
+                                    CachedValue<?> // Value
                                     >>>> cache = new HashMap<>();
     // ^^^ If you want to complain about this, please do
     // I'm sorry for your poor eyes which have to read this abomination
@@ -69,7 +69,7 @@ public class CachedMap {
         cache.computeIfAbsent(databaseId, d -> new HashMap<>())
                 .computeIfAbsent(table.getTableName(), t -> new HashMap<>())
                 .computeIfAbsent(primaryKey, e -> new HashMap<>())
-                .put(field.name(), (CachedValue<Object>) value);
+                .put(field.name(), value);
     }
 
     public <T extends Table<T, P>, P, V> boolean contains(

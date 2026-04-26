@@ -4,6 +4,7 @@ import dev.blitical.jigsawDB.annotations.Column;
 import dev.blitical.jigsawDB.annotations.PrimaryColumn;
 import dev.blitical.jigsawDB.cache.CacheHandler;
 import dev.blitical.jigsawDB.cache.CachePolicy;
+import dev.blitical.jigsawDB.cache.CachedMap;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.Driver;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
@@ -13,6 +14,7 @@ import dev.blitical.jigsawDB.entry.FieldEntry;
 import dev.blitical.jigsawDB.entry.selector.WithWhere;
 import dev.blitical.jigsawDB.exceptions.compile.DuplicatePrimaryColumnException;
 import dev.blitical.jigsawDB.exceptions.compile.NoPrimaryColumnException;
+import dev.blitical.jigsawDB.exceptions.runtime.TableNotInitializedException;
 import dev.blitical.jigsawDB.table.ColumnConfig;
 import dev.blitical.jigsawDB.table.DefinedColumnConfig;
 import dev.blitical.jigsawDB.table.Table;
@@ -71,6 +73,7 @@ public class ConnectedDatabase {
     private final Driver driver;
     private final Map<Class<? extends Table>, Table<?, ?>> tables;
     private final CachePolicy.StaticCachePolicy cachePolicy;
+    private final CachedMap cachedMap;
     // This allows other internal classes to use the exposed data
     protected final Exposed exposed;
     private final QueueManagerStore queueManager;
@@ -110,6 +113,7 @@ public class ConnectedDatabase {
                 uuid, this, driver, tables, cachePolicy, queueManager
         );
         this.queueManager.set(new QueueManager(exposed));
+        this.cachedMap = CacheHandler.getCachedMap(exposed);
     }
 
     protected ConnectedDatabase connect() {
@@ -234,13 +238,13 @@ public class ConnectedDatabase {
     }
 
     @CheckReturnValue
-    public <T extends Table<T, P>, P> ExecutableFuture<@NotNull Entry<T, P>>
+    public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
     getOrCreateEntry(Class<T> clazz, P id) {
         @SuppressWarnings("unchecked")
         Table<T, P> table = (Table<T, P>) tables.get(clazz);
 
         if (table == null)
-            return new ExecutableFuture<>(exposed, () -> null);
+            throw new TableNotInitializedException(clazz.getSimpleName());
 
         return new ExecutableFuture<>(exposed, () ->
                 new Entry<>(exposed, table, id, true)
@@ -248,25 +252,25 @@ public class ConnectedDatabase {
     }
 
     @CheckReturnValue
-    public <T extends Table<T, P>, P> WithWhere<T, P>
+    public <T extends Table<T, P>, P> @NotNull WithWhere<T, P>
     selectEntries(Class<T> clazz) {
         @SuppressWarnings("unchecked")
         Table<T, P> table = (Table<T, P>) tables.get(clazz);
 
         if (table == null)
-            return null;
+            throw new TableNotInitializedException(clazz.getSimpleName());
 
         return new WithWhere<>(exposed, table);
     }
 
     @CheckReturnValue
     @SuppressWarnings("unchecked")
-    public <T extends Table<T, P>, P> ExecutableFuture<@NotNull Entry<T, P>>
+    public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
     createEntry(Class<T> clazz, P id) {
         Table<T, P> table = (Table<T, P>) tables.get(clazz);
 
         if (table == null)
-            return null;
+            throw new TableNotInitializedException(clazz.getSimpleName());
 
         return new ExecutableFutureNullable<>(
                 exposed,
@@ -307,5 +311,45 @@ public class ConnectedDatabase {
                         throw new RuntimeException(e);
                     }
                 });
+    }
+
+    public void breakDatabase() {
+        cachedMap.breakDatabase(uuid);
+    }
+
+    public <T extends Table<T, ?>> void breakTable(
+            Class<T> clazz
+    ) {
+        @SuppressWarnings("unchecked")
+        Table<T, ?> table = (Table<T, ?>) tables.get(clazz);
+        if (table == null)
+            throw new TableNotInitializedException(clazz.getSimpleName());
+
+        cachedMap.breakTable(uuid, table);
+    }
+
+    public <T extends Table<T, P>, P> void breakEntry(
+            Class<T> clazz,
+            P primaryKey
+    ) {
+        @SuppressWarnings("unchecked")
+        Table<T, P> table = (Table<T, P>) tables.get(clazz);
+        if (table == null)
+            throw new TableNotInitializedException(clazz.getSimpleName());
+
+        cachedMap.breakEntry(uuid, table, primaryKey);
+    }
+
+    public <T extends Table<T, P>, P, F extends dev.blitical.jigsawDB.entry.Field<T, V>, V> void breakValue(
+            Class<T> clazz,
+            P primaryKey,
+            dev.blitical.jigsawDB.entry.Field<T, V> field
+    ) {
+        @SuppressWarnings("unchecked")
+        Table<T, P> table = (Table<T, P>) tables.get(clazz);
+        if (table == null)
+            throw new TableNotInitializedException(clazz.getSimpleName());
+
+        cachedMap.breakValue(uuid, table, primaryKey, field);
     }
 }
