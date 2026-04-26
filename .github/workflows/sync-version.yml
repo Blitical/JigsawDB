@@ -1,0 +1,37 @@
+name: Sync Version
+permissions:
+  contents: write
+on:
+  push:
+    paths:
+      - 'gradle.properties'
+      - '.github/workflows/sync-version.yml'
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update files
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
+          grep -rl '<!--VERSION-->' . | grep -v 'gradle.properties' | while read file; do
+            sed -i -E "s|(<!--VERSION-->)[^<]*(<!--END_VERSION-->)|\1${VERSION}\2|g" "$file"
+          done
+
+      - name: Push changes
+        run: |
+          git config --global user.email "jigsawdb@not.existent"
+          git config --global user.name "JigsawDB Version Sync"
+          git commit -am "Version Sync to v${{ steps.version.outputs.version }}" \
+            || echo "No changes to commit"
+          git push
