@@ -3,6 +3,7 @@ package dev.blitical.jigsawDB.entry;
 import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.cache.CacheHandler;
 import dev.blitical.jigsawDB.cache.CachePolicy;
+import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.table.Table;
 import dev.blitical.jigsawDB.value.ExecutableFutureNullable;
 import dev.blitical.jigsawDB.value.ExecutableFutureVoid;
@@ -49,7 +50,6 @@ public class Entry<T extends Table<T, P>, P> {
             }
             this.exists = true;
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -103,6 +103,7 @@ public class Entry<T extends Table<T, P>, P> {
         return new ExecutableFutureNullable<>(exposed, () -> {
             var cachedObject = CacheHandler.getCachedValue(exposed, table, primaryKey, field);
             if (cachedObject.isCached()) {
+                JigsawDBLogger.debug("CACHED VALUE TYPE: " + cachedObject.value().getClass());
                 return cachedObject.value();
             }
 
@@ -137,6 +138,19 @@ public class Entry<T extends Table<T, P>, P> {
         return new ExecutableFutureNullable<>(exposed, () -> {
             try {
                 return exposed.driver().getAsInputStream(table, primaryKey, field);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    @CheckReturnValue
+    @SuppressWarnings("unchecked")
+    public @NotNull ExecutableFutureVoid drop() {
+        return new ExecutableFutureVoid(exposed, () -> {
+            try {
+                exposed.driver().dropEntry(table, primaryKey);
+                exposed.database().breakEntry(table.getClass(), primaryKey);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

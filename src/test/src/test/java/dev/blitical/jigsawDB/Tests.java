@@ -11,6 +11,7 @@ import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.Driver;
 import dev.blitical.jigsawDB.drivers.MySQLDriver;
 import dev.blitical.jigsawDB.table.Table;
+import dev.blitical.jigsawDB.tables.NoCachingTable;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,6 +71,11 @@ public class Tests {
     }
 
     public static void destroy() {
+        databases.forEach(d -> {
+            var e = d.getEntry(NoCachingTable.class, TESTING_ENTRY_UUID).complete();
+            if (e != null)
+                e.drop().complete();
+        });
         databases.forEach(ConnectedDatabase::awaitShutdown);
 
         try (Stream<Path> paths = Files.walk(testingFolder)) {

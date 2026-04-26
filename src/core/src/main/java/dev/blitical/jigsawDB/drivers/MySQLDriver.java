@@ -201,6 +201,22 @@ public class MySQLDriver extends Driver {
     }
 
     @Override
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void dropEntry(
+            Table<T, P> table,
+            P primaryField
+    ) throws SQLException {
+        Encoder.EncodedObject eo = Encoder.encode(
+                primaryField,
+                table,
+                table.getPrimaryColumn()
+        );
+
+        String SQL = "DELETE FROM `" + table.getTableName()
+                + "` WHERE `" + table.getPrimaryColumnName() + "` = ?";
+        execute(SQL, eo == null ? null : eo.encoded());
+    }
+
+    @Override
     public <T extends Table<T, P>, P, F extends Field<T, ?>> boolean checkEntryAndCache(
             Table<T, P> table,
             Entry<T, P> entry,

@@ -18,4 +18,8 @@ public class TableNotInitializedException extends DatabaseRuntimeException {
     public TableNotInitializedException(Class<Table<?, ?>> tableClass) {
         super(String.format("The table '%s' has not been initialized yet", tableClass.getSimpleName()));
     }
+
+    public TableNotInitializedException(String tableName) {
+        super(String.format("The table '%s' has not been initialized yet", tableName));
+    }
 }
