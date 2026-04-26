@@ -59,8 +59,8 @@ And can easily be installed as a dependency with:<br>
 <table>
   <tr>
     <th><b>Maven</b></th>
-    <th><a href="">Gradle</a></th>
-    <th><a href="">Gradle (kts)</a></th>
+    <th><a href="./quickstart/gradle.quickstart.md">Gradle</a></th>
+    <th><a href="./quickstart/gradle.kts.quickstart.md">Gradle (kts)</a></th>
   </tr>
   <tr>
     <td colspan="3">
