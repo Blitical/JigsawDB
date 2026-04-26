@@ -6,11 +6,10 @@ import dev.blitical.jigsawDB.exceptions.runtime.ExecutableFutureTimeoutException
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 public class QueueManager {
     private static final ThreadLocal<Boolean> IN_QUEUE = ThreadLocal.withInitial(() -> false);
-    private final BlockingQueue<QueuedTask<?>> queue = new LinkedBlockingQueue();
+    private final BlockingQueue<QueuedTask<?>> queue = new LinkedBlockingQueue<>();
     private final ExecutorService executor;
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
     private final Thread worker;
@@ -61,20 +60,22 @@ public class QueueManager {
         return task;
     }
 
-    public <T> T safeQueue(Supplier<T> supplier) {
+    public <T> T safeQueue(ExecutableFuture<T> future) {
         if (!this.exposed.isOpen() && !this.exposed.driver().driverIsNull()) {
             throw new DatabaseDisconnectedException(this.exposed.driver().formatedName());
         }
         if (inQueueThread()) {
             try {
-                return supplier.get();
+                QueuedTask<T> task = new QueuedTask<>(this, future);
+                task.executeDirect();
+                return task.await();
             } catch (Throwable t) {
                 throw t instanceof RuntimeException ex
                         ? ex : new RuntimeException(t);
             }
         }
 
-        return this.queue(new ExecutableFuture<>(this.exposed, supplier)).await();
+        return this.queue(future).await();
     }
 
     public static class QueuedTask<T> {
@@ -120,6 +121,44 @@ public class QueueManager {
                 error = t;
                 f.failure.accept(t);
             } finally {
+                if (f.metadataGetter != null) {
+                    f.metadataGetter.setResult(
+                            new ExecutableMetadataGetter.Result(start, end, end - start, timedOut)
+                    );
+                }
+                latch.countDown();
+            }
+        }
+
+        private void executeDirect() {
+            start = System.nanoTime();
+            Thread t;
+            FutureTask<T> task;
+
+            try {
+                if (f.timeout != null && f.timeoutUnit != null) {
+                    task = new FutureTask<>(f.executable::get);
+                    t = new Thread(task, "ExecutableFuture-Direct-" + manager.exposed.driver().formatedName());
+                    t.start();
+
+                    try {
+                        result = task.get(f.timeout, f.timeoutUnit);
+                        f.success.accept(result);
+                    } catch (TimeoutException e) {
+                        task.cancel(true);
+                        timedOut = true;
+                        error = new ExecutableFutureTimeoutException(f.timeout, f.timeoutUnit);
+                        f.failure.accept(error);
+                    }
+                } else {
+                    result = f.executable.get();
+                    f.success.accept(result);
+                }
+            } catch (Throwable ex) {
+                error = ex;
+                f.failure.accept(ex);
+            } finally {
+                end = System.nanoTime();
                 if (f.metadataGetter != null) {
                     f.metadataGetter.setResult(
                             new ExecutableMetadataGetter.Result(start, end, end - start, timedOut)

@@ -36,7 +36,7 @@ public class ExecutableFuture<T> {
     }
 
     public @NotNull T complete(boolean shouldQueue) {
-        return shouldQueue ? queue.safeQueue(executable) : executable.get();
+        return shouldQueue ? queue.safeQueue(this) : executable.get();
     }
 
     public @NotNull T complete() {

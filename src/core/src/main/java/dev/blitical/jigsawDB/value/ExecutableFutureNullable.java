@@ -22,7 +22,7 @@ public class ExecutableFutureNullable<T> extends ExecutableFuture<T> {
     }
 
     public @Nullable T complete(boolean shouldQueue) {
-        return shouldQueue ? queue.safeQueue(executable) : executable.get();
+        return shouldQueue ? queue.safeQueue(this) : executable.get();
     }
 
     public @Nullable T complete() {
