@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version
         id: version
@@ -32,6 +34,14 @@ jobs:
         run: |
           git config --global user.email "jigsawdb@not.existent"
           git config --global user.name "JigsawDB Version Sync"
-          git commit -am "Version Sync to v${{ steps.version.outputs.version }}" \
-            || echo "No changes to commit"
+          git checkout -B "${GITHUB_REF_NAME}"
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git add -A
+          git commit -am "Version Sync to v${{ steps.version.outputs.version }}"
+          
           git push
