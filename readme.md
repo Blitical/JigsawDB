@@ -70,6 +70,12 @@ And can easily be installed as a dependency with:<br>
       &lt;artifactId&gt;jigsawdb&lt;/artifactId&gt;
       &lt;version&gt;<!--VERSION-->1.0.0-beta.1<!--END_VERSION-->&lt;/version&gt;
   &lt;/dependency&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;dev.blitical&lt;/groupId&gt;
+    &lt;artifactId&gt;jigsawdb&lt;/artifactId&gt;
+    &lt;version&gt;<!--VERSION-->1.0.0-beta.1<!--END_VERSION-->&lt;/version&gt;
+    &lt;scope&gt;provided&lt;/scope&gt;
+  &lt;/dependency&gt;
 &lt;/dependencies&gt;</code></pre>
     </td>
   </tr>
