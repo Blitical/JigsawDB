@@ -25,8 +25,8 @@ And can easily be installed as a dependency with:<br>
   <tr>
     <td colspan="3">
       <pre lang="groovy"><code>dependencies {
-    implementation("dev.blitical:jigsawdb:<!--VERSION-->1.0.0-beta.1<!--END_VERSION-->")
-    annotationProcessor("dev.blitical:jigsawdb:<!--VERSION-->1.0.0-beta.1<!--END_VERSION-->")
+    implementation("dev.blitical:jigsawdb:<!--VERSION-->1.0.0-beta.2<!--END_VERSION-->")
+    annotationProcessor("dev.blitical:jigsawdb:<!--VERSION-->1.0.0-beta.2<!--END_VERSION-->")
 }</code></pre>
     </td>
   </tr>
