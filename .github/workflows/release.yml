@@ -51,6 +51,9 @@ jobs:
           echo "$CONTENT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Build shadowJar
+        run: ./gradlew clean shadowJar
+
       - name: Create GitHub Release + upload assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
