@@ -37,6 +37,22 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
+// Force mavenPublishing to use shadowJar
+configurations {
+    named("runtimeElements") {
+        outgoing {
+            artifacts.clear()
+            artifact(tasks.shadowJar)
+        }
+    }
+    named("apiElements") {
+        outgoing {
+            artifacts.clear()
+            artifact(tasks.shadowJar)
+        }
+    }
+}
+
 mavenPublishing {
     publishToMavenCentral()
     coordinates(group.toString(), rootProject.name, version.toString())
