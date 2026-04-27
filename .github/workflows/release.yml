@@ -26,9 +26,6 @@ jobs:
           java-version: 25
           cache: gradle
 
-      - name: Build shadow jar
-        run: ./gradlew clean shadowJar
-
       - name: Publish to Maven Central
         run: ./gradlew publishToMavenCentral
         env:
