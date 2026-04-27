@@ -1,7 +1,7 @@
 plugins {
     java
     id("com.gradleup.shadow") version "8.3.3"
-    `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.36.0"
     signing
 }
 
@@ -32,56 +32,40 @@ tasks.shadowJar {
     manifest {
         attributes["Automatic-Module-Name"] = "dev.blitical.jigsawDB"
     }
-    
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     mergeServiceFiles()
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifact(tasks.shadowJar)
+mavenPublishing {
+    publishToMavenCentral()
+    coordinates(group.toString(), rootProject.name, version.toString())
 
-            groupId = "dev.blitical"
-            artifactId = rootProject.name
-            version = project.version.toString()
+    pom {
+        name = "JigsawDB"
+        description =
+            "A Java package made specifically to reduce the need for string-based SQL, by validating as much as possible at compile-time."
 
-            pom {
-                name.set("jigsawDB")
-                description.set("Your description here")
-                url.set("https://github.com/YOUR_USERNAME/YOUR_REPO")
-
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-
-                developers {
-                    developer {
-                        id.set("blitical")
-                        name.set("Blitical")
-                    }
-                }
-
-                scm {
-                    connection.set("scm:git:git://github.com/YOUR_USERNAME/YOUR_REPO.git")
-                    developerConnection.set("scm:git:ssh://github.com/YOUR_USERNAME/YOUR_REPO.git")
-                    url.set("https://github.com/YOUR_USERNAME/YOUR_REPO")
-                }
+        url = "https://github.com/Blitical/JigsawDB"
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
             }
         }
-    }
 
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("OSSRH_USERNAME")
-                password = System.getenv("OSSRH_PASSWORD")
+        developers {
+            developer {
+                id = "blitical"
+                name = "Blitical"
+                url = "https://github.com/Blitical"
             }
+        }
+
+        scm {
+            url = "https://github.com/Blitical/JigsawDB"
+            connection = "scm:git:git://github.com/Blitical/JigsawDB.git"
+            developerConnection = "scm:git:ssh://git@github.com/Blitical/JigsawDB.git"
         }
     }
 }
@@ -91,5 +75,5 @@ signing {
         System.getenv("GPG_PRIVATE_KEY"),
         System.getenv("GPG_PASSPHRASE")
     )
-    sign(publishing.publications["mavenJava"])
+    sign(publishing.publications)
 }

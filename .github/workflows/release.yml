@@ -30,14 +30,9 @@ jobs:
         run: ./gradlew clean shadowJar
 
       - name: Publish to Maven Central
-        run: ./gradlew publish
+        run: ./gradlew publishToMavenCentral
         env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_TOKEN_USER }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Upload JAR to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/libs/*.jar
