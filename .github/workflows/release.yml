@@ -2,8 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-  release:
-    types: [ published ]
 
 jobs:
   build-publish:
@@ -25,6 +23,51 @@ jobs:
           distribution: temurin
           java-version: 25
           cache: gradle
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate release notes
+        id: notes
+        run: |
+          FILE=".github/nextRelease.md"
+
+          if [ ! -f "$FILE" ]; then
+            echo "nextRelease.md must exist"
+            exit 1
+          fi
+
+          CONTENT=$(cat "$FILE")
+
+          if [ -z "$CONTENT" ]; then
+            echo "nextRelease.md must not be empty."
+            exit 1
+          fi
+
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release + upload assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES_FILE=".github/nextRelease.md"
+
+          TAG="v$VERSION"
+
+          gh release create "$TAG" \
+            "./build/libs/"*.jar \
+            --title "$VERSION" \
+            --notes-file "$NOTES_FILE"
+
+      - name: Clear nextRelease.md
+        run: |
+          echo "" > .github/nextRelease.md
 
       - name: Publish to Maven Central
         run: ./gradlew publishToMavenCentral
