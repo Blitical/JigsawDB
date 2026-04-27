@@ -68,6 +68,13 @@ jobs:
       - name: Clear nextRelease.md
         run: |
           echo "" > .github/nextRelease.md
+          
+          git config --global user.email "jigsawdb@not.existent"
+          git config --global user.name "JigsawDB AutoPublish"
+
+          git add .github/nextRelease.md
+          git commit -m "chore: clear nextRelease.md after release" || exit 0
+          git push
 
       - name: Publish to Maven Central
         run: ./gradlew publishToMavenCentral
