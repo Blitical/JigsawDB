@@ -49,8 +49,8 @@ mavenPublishing {
         url = "https://github.com/Blitical/JigsawDB"
         licenses {
             license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
+                name.set("GNU General Public License v3.0")
+                url.set("https://www.gnu.org/licenses/gpl-3.0.html")
             }
         }
 
