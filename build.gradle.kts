@@ -37,10 +37,6 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
-tasks.jar {
-    enabled = false
-}
-
 mavenPublishing {
     publishToMavenCentral()
     coordinates(group.toString(), rootProject.name, version.toString())
