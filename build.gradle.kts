@@ -15,8 +15,11 @@ allprojects {
 }
 
 dependencies {
-    implementation(project(":core"))
-    implementation(project(":processor"))
+    compileOnly(project(":core"))
+    compileOnly(project(":processor"))
+
+    shadow(project(":core"))
+    shadow(project(":processor"))
 }
 
 tasks.build {
