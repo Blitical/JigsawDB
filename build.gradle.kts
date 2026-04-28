@@ -15,8 +15,12 @@ allprojects {
 }
 
 dependencies {
-    implementation(project(":core"))
-    implementation(project(":processor"))
+    shadow(project(":core")) {
+        isTransitive = true
+    }
+    shadow(project(":processor")) {
+        isTransitive = true
+    }
 }
 
 tasks.build {
@@ -28,7 +32,8 @@ tasks.shadowJar {
     archiveVersion.set(project.version.toString())
     archiveClassifier.set("") // removes "-all"
 
-    configurations = listOf(project.configurations.runtimeClasspath.get())
+    configurations = listOf(project.configurations.shadow.get())
+    relocate("com.google.gson", "dev.blitical.jigsawdb.shaded.gson")
     manifest {
         attributes["Automatic-Module-Name"] = "dev.blitical.jigsawDB"
     }
@@ -66,24 +71,6 @@ mavenPublishing {
             url = "https://github.com/Blitical/JigsawDB"
             connection = "scm:git:git://github.com/Blitical/JigsawDB.git"
             developerConnection = "scm:git:ssh://git@github.com/Blitical/JigsawDB.git"
-        }
-
-        // Manually remove core and processor
-        withXml {
-            val root = asNode()
-            val dependencies = root.get("dependencies") as? groovy.util.NodeList ?: return@withXml
-
-            dependencies.forEach { dependNode ->
-                val depends = dependNode as groovy.util.Node
-                val toRemove = depends.children().filterIsInstance<groovy.util.Node>().filter { dep ->
-                    val groupId = dep.get("groupId")?.toString()
-                    val artifactId = dep.get("artifactId")?.toString()
-
-                    groupId == "dev.blitical" && (artifactId == "core" || artifactId == "processor")
-                }
-
-                toRemove.forEach { depends.remove(it) }
-            }
         }
     }
 }
