@@ -15,11 +15,8 @@ allprojects {
 }
 
 dependencies {
-    compileOnly(project(":core"))
-    compileOnly(project(":processor"))
-
-    shadow(project(":core"))
-    shadow(project(":processor"))
+    implementation(project(":core"))
+    implementation(project(":processor"))
 }
 
 tasks.build {
@@ -40,18 +37,10 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
-// Force mavenPublishing to use shadowJar
-configurations {
-    named("runtimeElements") {
-        outgoing {
-            artifacts.clear()
-            artifact(tasks.shadowJar)
-        }
-    }
-    named("apiElements") {
-        outgoing {
-            artifacts.clear()
-            artifact(tasks.shadowJar)
+publishing {
+    publications {
+        create<MavenPublication>("shadow") {
+            from(components["shadow"])
         }
     }
 }
