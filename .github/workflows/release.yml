@@ -1,36 +1,39 @@
 name: Release
-
+permissions:
+  contents: write
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - 'gradle.properties'
+      - '.github/workflows/sync-version.yml'
 
 jobs:
   build-publish:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout
+      - name: "Preparation: Checkout"
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Make gradlew executable
+      - name: "Preparation: Make gradlew executable"
         run: chmod +x ./gradlew
 
-      - name: Set up JDK
+      - name: "Preparation: Set up JDK"
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 25
           cache: gradle
 
-      - name: Extract version
+      - name: "Preparation: Extract version"
         id: version
         run: |
           VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Validate release notes
+      - name: "Preparation: Validate release notes"
         id: notes
         run: |
           FILE=".github/nextRelease.md"
@@ -51,10 +54,15 @@ jobs:
           echo "$CONTENT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Build shadowJar
-        run: ./gradlew clean shadowJar
+      - name: "Release: Publish to Maven Central"
+        run: ./gradlew publishAndReleaseToMavenCentral
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_TOKEN_USER }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Create GitHub Release + upload assets
+      - name: "Release: Create GitHub Release + upload assets"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -68,21 +76,30 @@ jobs:
             --title "$VERSION" \
             --notes-file "$NOTES_FILE"
 
-      - name: Clear nextRelease.md
+      - name: "Cleanup: Update version in files"
         run: |
-          echo "" > .github/nextRelease.md
-          
+          VERSION=${{ steps.version.outputs.version }}
+
+          grep -rl '<!--VERSION-->' . | grep -v 'gradle.properties' | while read file; do
+            sed -i -E "s|(<!--VERSION-->)[^<]*(<!--END_VERSION-->)|\1${VERSION}\2|g" "$file"
+          done
+
+      - name: "Cleanup: Clear nextRelease.md"
+        run: |
+          echo ./github/assets/nextRelease.md.template > .github/nextRelease.md
+
+      - name: "Cleanup: Push changes"
+        run: |
           git config --global user.email "jigsawdb@not.existent"
-          git config --global user.name "JigsawDB AutoPublish"
+          git config --global user.name "JigsawDB Version Update"
+          git checkout -B "${GITHUB_REF_NAME}"
 
-          git add .github/nextRelease.md
-          git commit -m "chore: clear nextRelease.md after release" || exit 0
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git add -A
+          git commit -am "[BOT] Update version to v${{ steps.version.outputs.version }}"
+          
           git push
-
-      - name: Publish to Maven Central
-        run: ./gradlew publishToMavenCentral
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_TOKEN_USER }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
