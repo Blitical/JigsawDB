@@ -8,3 +8,8 @@
 ## Changelog
 
 - Renamed release bot from "JigsawDB Bot" to "JigsawDB"
+- Added support for `MariaDB` and `PostgreSQL`
+    - We did this by reworking the entire hierarchy of databases
+    - <sup>**POSTGRESQL ONLY**</sup> `PostgreSQL` does not support `NUL` characters. These will be stripped and a warning will be thrown.
+    - We have added a `ParseType.BINARY` to combat this; this parses any object into a binary object.
+        - This can be used for any database type.

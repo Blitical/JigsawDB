@@ -14,7 +14,7 @@ confidence**!
 
 - **Database initialisation**
     - We use JDBC to let us execute SQL on any database you'd like!
-    - We support SQLite, MySQL, ~~MariaDB, and PostgreSQL~~ (MariaDB and PostgreSQL support is planned)
+    - We support SQLite, MySQL, MariaDB, and PostgreSQL
     - You can change databases anytime by updating one line of code!
         - It will function the exact same.
 - **Table creation**
