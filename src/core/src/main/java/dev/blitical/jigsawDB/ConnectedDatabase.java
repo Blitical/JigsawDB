@@ -14,6 +14,7 @@ import dev.blitical.jigsawDB.entry.FieldEntry;
 import dev.blitical.jigsawDB.entry.selector.WithWhere;
 import dev.blitical.jigsawDB.exceptions.compile.DuplicatePrimaryColumnException;
 import dev.blitical.jigsawDB.exceptions.compile.NoPrimaryColumnException;
+import dev.blitical.jigsawDB.exceptions.initialization.DuplicateTableException;
 import dev.blitical.jigsawDB.exceptions.runtime.TableNotInitializedException;
 import dev.blitical.jigsawDB.table.ColumnConfig;
 import dev.blitical.jigsawDB.table.DefinedColumnConfig;
@@ -72,6 +73,8 @@ public class ConnectedDatabase {
     private final String uuid = UUID.randomUUID().toString();
     private final Driver driver;
     private final Map<Class<? extends Table>, Table<?, ?>> tables;
+    private final Map<Class<? extends Table>, Table<?, ?>> regularTables;
+    private final Map<Class<? extends Table>, Table<?, ?>> shadowTables;
     private final CachePolicy.StaticCachePolicy cachePolicy;
     private final CachedMap cachedMap;
     // This allows other internal classes to use the exposed data
@@ -106,7 +109,19 @@ public class ConnectedDatabase {
 
     protected ConnectedDatabase(DatabaseBuilder builder) {
         this.driver = builder.driver;
-        this.tables = builder.tables;
+
+        Map<Class<? extends Table>, Table<?, ?>> allTables = new HashMap<>(builder.shadowTables);
+        for (var entry : builder.tables.entrySet()) {
+            allTables.put(entry.getKey(), entry.getValue());
+            if (builder.shadowTables.containsKey(entry.getKey())) {
+                throw new DuplicateTableException();
+            }
+        }
+
+        this.tables = Map.copyOf(allTables);
+        this.regularTables = Map.copyOf(builder.tables);
+        this.shadowTables = Map.copyOf(builder.shadowTables);
+
         this.cachePolicy = builder.cachePolicy;
         this.queueManager = new QueueManagerStore();
         this.exposed = new Exposed(
@@ -119,7 +134,7 @@ public class ConnectedDatabase {
     protected ConnectedDatabase connect() {
         try {
             driver.connect();
-            for (Map.Entry<Class<? extends Table>, Table<?, ?>> entry : tables.entrySet()) {
+            for (var entry : regularTables.entrySet()) {
                 createTable(entry.getKey(), entry.getValue());
             }
             CONNECTED_DATABASES.add(this);

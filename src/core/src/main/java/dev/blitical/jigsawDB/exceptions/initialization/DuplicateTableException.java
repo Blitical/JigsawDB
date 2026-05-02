@@ -6,7 +6,8 @@ import dev.blitical.jigsawDB.exceptions.exceptionHandler.JigsawDBException;
         severity = JigsawDBException.Severity.SEVERE,
         fixes = {
                 "Renaming the table to a different class name",
-                "Overriding the table name in the table config"
+                "Overriding the table name in the table config",
+                "Ensuring that you do not have the same table registered as a RegularTable and a ShadowTable"
         }
 )
 public class DuplicateTableException extends InitializationException {
