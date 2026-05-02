@@ -3,8 +3,13 @@ permissions:
   contents: write
 on:
   push:
+    branches:
+      - main
     paths:
       - 'gradle.properties'
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   build-publish:
@@ -70,10 +75,55 @@ jobs:
 
           TAG="v$VERSION"
 
+          gh release view "$TAG" >/dev/null 2>&1 && exit 0
           gh release create "$TAG" \
             "./build/libs/"*.jar \
             --title "$VERSION" \
             --notes-file "$NOTES_FILE"
+
+      - name: "Release: Generate Javadocs"
+        run: ./gradlew javadoc
+
+      - name: "Release: Publish Javadocs branch"
+        run: |
+          DOCS_BRANCH="javadocs"
+          DOCS_DIR="src/core/build/docs/javadoc"
+
+          if [ ! -d "$DOCS_DIR" ]; then
+            echo "Javadocs not generated"
+            exit 1
+          fi
+
+          TEMP_DIR=$(mktemp -d)
+
+          cp -R "$DOCS_DIR"/. "$TEMP_DIR"/
+
+          git fetch origin
+
+          if git ls-remote --exit-code --heads origin "$DOCS_BRANCH"; then
+            git checkout "$DOCS_BRANCH"
+          else
+            git checkout --orphan "$DOCS_BRANCH"
+          fi
+
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name 'CNAME' \
+            ! -name '.git' \
+            -exec rm -rf {} +
+
+          cp -R "$TEMP_DIR"/. .
+
+          touch .nojekyll
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No Javadocs changes"
+            exit 0
+          fi
+
+          git commit -m "[BOT] Update Javadocs for v${{ steps.version.outputs.version }}"
+          git push origin "$DOCS_BRANCH" --force
 
       - name: "Cleanup: Update version in files"
         run: |
@@ -85,7 +135,7 @@ jobs:
 
       - name: "Cleanup: Clear nextRelease.md"
         run: |
-          echo ./github/assets/nextRelease.md.template > .github/nextRelease.md
+          cp .github/assets/nextRelease.md.template .github/nextRelease.md
 
       - name: "Cleanup: Push changes"
         run: |
