@@ -1,4 +1,4 @@
-# JigsawDB v1.0.0-beta.7
+# JigsawDB v1.0.0-beta.8
 
 > [!WARNING]
 > **JigsawDB is currently in its public beta release; there may be issues**  

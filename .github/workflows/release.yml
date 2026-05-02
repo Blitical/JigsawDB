@@ -22,6 +22,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup git identity
+        run: |
+          git config --global user.email "jigsawdb@not.existent"
+          git config --global user.name "JigsawDB Bot"
+
       - name: "Preparation: Make gradlew executable"
         run: chmod +x ./gradlew
 
@@ -147,10 +152,6 @@ jobs:
 
       - name: "Cleanup: Push changes"
         run: |
-          git config --global user.email "jigsawdb@not.existent"
-          git config --global user.name "JigsawDB Version Update"
-          git checkout -B "${GITHUB_REF_NAME}"
-
           if git diff --quiet && git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
