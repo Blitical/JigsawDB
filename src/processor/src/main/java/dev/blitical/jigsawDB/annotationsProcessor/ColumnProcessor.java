@@ -81,9 +81,17 @@ public final class ColumnProcessor extends AbstractProcessor {
 
         List<? extends TypeMirror> args = declared.getTypeArguments();
         if (args.size() != 2) {
-            throw new IllegalStateException("Table must declare 2 generic parameters"); // Impossible too
+            throw new MisusedAnnotationException(entryName, "@Column");
         }
+
+        TypeMirror selfType = args.get(0);
         TypeMirror primaryKeyType = args.get(1);
+        if (!types.isSameType(
+                types.erasure(selfType),
+                types.erasure(entryType)
+        )) {
+            throw new MisusedAnnotationException(entryName, "@Column");
+        }
 
         String pkg = elements.getPackageOf(entry)
                 .getQualifiedName()

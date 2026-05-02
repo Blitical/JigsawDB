@@ -6,7 +6,7 @@ import dev.blitical.jigsawDB.exceptions.exceptionHandler.JigsawDBException;
         severity = JigsawDBException.Severity.SEVERE,
         fixes = {
                 "Removing the annotation",
-                "Ensuring that your class extends the correct superclass (eg: YourTable extends Table<K, V>)",
+                "Ensuring that your class extends the correct superclass (eg: YourTable extends Table<YourTable, PrimaryKey>)",
                 "Ensuring that all values annotated with @PrimaryColumn are also annotated with @Column(\"...\")"
         }
 )
