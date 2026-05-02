@@ -3,6 +3,7 @@ dev.blitical.jigsawDB.annotations
 dev.blitical.jigsawDB.cache
 dev.blitical.jigsawDB.config
 dev.blitical.jigsawDB.drivers
+dev.blitical.jigsawDB.drivers.hierarchy
 dev.blitical.jigsawDB.drivers.misc
 dev.blitical.jigsawDB.encoder
 dev.blitical.jigsawDB.encoder.encoderTypes
