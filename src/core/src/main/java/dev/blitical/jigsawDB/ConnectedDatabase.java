@@ -205,7 +205,7 @@ public class ConnectedDatabase {
         return switch (Encoder.resolveParseType(field)) {
             case INTEGER, REAL, ENUM_ORDINAL, TEMPORAL_EPOCH, TEMPORAL_ISO -> defaultValue.toString();
             case STRING, UUID_STRING, ENUM_STRING -> "'" + defaultValue.toString().replace("'", "''") + "'";
-            case JSON, JAVA_SERIALIZED, BLOB -> "NULL"; // Default value handled by us
+            case JSON, JAVA_SERIALIZED, BLOB, BINARY -> "NULL"; // Default value handled by us
         };
     }
 

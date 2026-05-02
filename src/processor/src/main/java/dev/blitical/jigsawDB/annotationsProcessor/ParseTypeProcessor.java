@@ -68,6 +68,7 @@ public final class ParseTypeProcessor extends AbstractProcessor {
             case UUID_STRING -> UUIDStringEncoder.check(context);
             case TEMPORAL_EPOCH -> TemporalEpochEncoder.check(context);
             case TEMPORAL_ISO -> TemporalIsoEncoder.check(context);
+            case BINARY -> BinaryEncoder.check(context);
         };
 
         if (result != null && !result.passed()) {

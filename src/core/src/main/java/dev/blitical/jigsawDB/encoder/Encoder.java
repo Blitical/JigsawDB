@@ -18,6 +18,7 @@ import static dev.blitical.jigsawDB.encoder.ParseType.PREDEFINED_TYPES;
 public final class Encoder {
 
     public static ParseType resolveParseType(Field field) {
+        if (field == null) return null;
         AnnotatedType type = field.getAnnotatedType();
 
         if (type.getAnnotation(Parse.class) != null) {
@@ -93,6 +94,7 @@ public final class Encoder {
             case UUID_STRING -> UUIDStringEncoder.encode(value);
             case TEMPORAL_EPOCH -> TemporalEpochEncoder.encode(value);
             case TEMPORAL_ISO -> TemporalIsoEncoder.encode(value);
+            case BINARY -> BinaryEncoder.encode(value);
         };
 
         return new EncodedObject(type.type, encoded);
@@ -138,6 +140,7 @@ public final class Encoder {
             case UUID_STRING -> UUIDStringEncoder.decode((String) value, field);
             case TEMPORAL_EPOCH -> TemporalEpochEncoder.decode(value, field);
             case TEMPORAL_ISO -> TemporalIsoEncoder.decode(value, field);
+            case BINARY -> BinaryEncoder.decode(value, field);
         };
 
         return decoded;

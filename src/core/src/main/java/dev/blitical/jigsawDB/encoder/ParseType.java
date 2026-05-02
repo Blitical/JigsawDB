@@ -10,6 +10,7 @@ public enum ParseType {
     JAVA_SERIALIZED(EncodedType.BLOB),
     TEMPORAL_ISO(EncodedType.STRING),
     TEMPORAL_EPOCH(EncodedType.INTEGER),
+    BINARY(EncodedType.BLOB),
 
     INTEGER(EncodedType.INTEGER),
     REAL(EncodedType.REAL),
