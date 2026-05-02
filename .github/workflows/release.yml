@@ -100,6 +100,7 @@ jobs:
           cp -R "$DOCS_DIR"/. "$TEMP_DIR"/
 
           git fetch origin
+          git reset --hard
 
           if git ls-remote --exit-code --heads origin "$DOCS_BRANCH"; then
             git checkout "$DOCS_BRANCH"
@@ -125,6 +126,12 @@ jobs:
 
           git commit -m "[BOT] Update Javadocs for v${{ steps.version.outputs.version }}"
           git push origin "$DOCS_BRANCH" --force
+
+      - name: "Preparation: Restore main branch"
+        run: |
+          git fetch origin
+          git checkout "${GITHUB_REF_NAME}"
+          git reset --hard origin/"${GITHUB_REF_NAME}"
 
       - name: "Cleanup: Update version in files"
         run: |
