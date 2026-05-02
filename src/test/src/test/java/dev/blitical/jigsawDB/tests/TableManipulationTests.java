@@ -26,7 +26,7 @@ public class TableManipulationTests {
             entry.set(OriginalTableFields.integer, INTEGER).complete();
             entry.set(OriginalTableFields.longValue, LONG).complete();
         });
-        Tests.destroy(false, false);
+        Tests.destroy(false);
         Tests.createDatabases(d -> d.addTable(new ModifiedTable()));
         Tests.databases.forEach(d -> {
             var entry = d.getOrCreateEntry(ModifiedTable.class, Tests.TESTING_ENTRY_UUID).complete();

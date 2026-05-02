@@ -11,6 +11,8 @@ import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.*;
 import dev.blitical.jigsawDB.table.Table;
 import dev.blitical.jigsawDB.tables.NoCachingTable;
+import dev.blitical.jigsawDB.tables.modified.ModifiedTable;
+import dev.blitical.jigsawDB.tables.modified.OriginalTable;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +29,11 @@ import java.util.stream.Stream;
 public class Tests {
     public static final boolean DELETE_FOLDER = true;
     public static final UUID TESTING_ENTRY_UUID = UUID.randomUUID();
+    public static final Class<?>[] TABLES = new Class[]{
+            NoCachingTable.class,
+            OriginalTable.class,
+            ModifiedTable.class
+    };
     public static Path testingFolder = null;
     public static Set<ConnectedDatabase> databases = new HashSet<>();
 
@@ -61,16 +68,24 @@ public class Tests {
         });
     }
 
-    public static void destroy() {
-        destroy(null, true);
+    @SuppressWarnings("unchecked")
+    public static <T extends Table<T, V>, V> void destroy() {
+        for (var table : TABLES) {
+            dropEntry((Class<T>) table);
+        }
+        destroy(null);
     }
 
-    public static void destroy(Boolean overrideDeletion, boolean dropEntries) {
+    @SuppressWarnings("unchecked")
+    public static <T extends Table<T, V>, V> void dropEntry(Class<T> clazz) {
         databases.forEach(d -> {
-            var e = d.getEntry(NoCachingTable.class, TESTING_ENTRY_UUID).complete();
-            if (e != null && dropEntries)
+            var e = d.getEntry(clazz, (V) TESTING_ENTRY_UUID).complete();
+            if (e != null)
                 e.drop().complete();
         });
+    }
+
+    public static void destroy(Boolean overrideDeletion) {
         databases.forEach(ConnectedDatabase::awaitShutdown);
         databases.clear();
 
