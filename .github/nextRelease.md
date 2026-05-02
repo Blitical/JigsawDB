@@ -14,3 +14,5 @@
     - We have added a `ParseType.BINARY` to combat this; this parses any object into a binary object.
         - This can be used for any database type.
 - Fixed bug where if no error is thrown if superclass `Table<K, V>` is not properly extended
+- Added new TableManipulation tests, this is also a core part of our project
+

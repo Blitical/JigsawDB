@@ -211,7 +211,7 @@ public class SetAndGetTests {
                 throw new IllegalStateException(String.format("Mismatch database values in testing 'temporal-epoch': \"%s\" != \"%s\"", max, compare2));
             }
 
-            JigsawDBLogger.info("Passed TemporalEpochSetAndGet test", new Object[0]);
+            JigsawDBLogger.info("Passed TemporalEpochSetAndGet test");
         }
 
     }
@@ -334,7 +334,7 @@ public class SetAndGetTests {
     }
 
     @Test
-    void BinaryInputStreamSetAndGet() {
+    void binaryInputStreamSetAndGet() {
         for (ConnectedDatabase d : Tests.databases) {
             var entry = d.getOrCreateEntry(NoCachingTable.class, Tests.TESTING_ENTRY_UUID).complete();
             String hash1;
