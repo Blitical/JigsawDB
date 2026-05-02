@@ -25,7 +25,7 @@ jobs:
       - name: Setup git identity
         run: |
           git config --global user.email "jigsawdb@not.existent"
-          git config --global user.name "JigsawDB Bot"
+          git config --global user.name "JigsawDB"
 
       - name: "Preparation: Make gradlew executable"
         run: chmod +x ./gradlew
