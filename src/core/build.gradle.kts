@@ -21,6 +21,5 @@ dependencies {
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.3.3")
     runtimeOnly("org.postgresql:postgresql:42.7.3")
 
-    // We will have our own logger implementation
-    runtimeOnly("org.slf4j:slf4j-nop:2.0.13")
+    implementation("org.slf4j:slf4j-api:2.0.13")
 }

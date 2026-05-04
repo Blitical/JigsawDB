@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class Tests {
@@ -39,6 +38,7 @@ public class Tests {
 
     public static void createDatabases(Consumer<DatabaseBuilder> function) {
         Logger.LOG_TYPES = LogType.ALL;
+        LoggerConfig.init();
 
         try {
             if (testingFolder == null) {

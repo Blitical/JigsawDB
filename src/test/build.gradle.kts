@@ -19,6 +19,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testAnnotationProcessor(project(":processor"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    testImplementation("ch.qos.logback:logback-classic:1.5.6")
 }
 
 tasks.test {
