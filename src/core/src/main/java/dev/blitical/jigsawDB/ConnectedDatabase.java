@@ -302,6 +302,12 @@ public class ConnectedDatabase {
     }
 
     @CheckReturnValue
+    public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
+    createEntry(Class<T> clazz, P id) {
+        return createEntry(clazz, id, null);
+    }
+
+    @CheckReturnValue
     @SuppressWarnings("unchecked")
     public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
     createEntry(Class<T> clazz, P id, Function<InitialValueExecutor<T, P>, InitialValueExecutor.Built<T, P>> initialValuesBuilder) {
