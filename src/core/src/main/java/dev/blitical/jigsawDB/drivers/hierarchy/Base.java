@@ -4,7 +4,11 @@ import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.cache.CacheHandler;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.Driver;
+import dev.blitical.jigsawDB.drivers.action.Action;
+import dev.blitical.jigsawDB.drivers.action.Bucket;
+import dev.blitical.jigsawDB.drivers.action.GetAction;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
+import dev.blitical.jigsawDB.drivers.misc.PermanentInputStream;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
 import dev.blitical.jigsawDB.encoder.Encoder;
@@ -18,7 +22,10 @@ import dev.blitical.jigsawDB.entry.selector.util.OrderType;
 import dev.blitical.jigsawDB.table.Table;
 
 import java.io.InputStream;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -45,6 +52,11 @@ public abstract class Base extends Driver {
             connection.close();
             connection = null;
         }
+    }
+
+    @Override
+    public Connection getConnection() {
+        return connection;
     }
 
     @Override
@@ -88,11 +100,11 @@ public abstract class Base extends Driver {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void createEntry(
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action createEntry(
             Table<T, P> table,
             P primaryField,
             List<FieldEntry<T, ?, ?>> values
-    ) throws SQLException {
+    ) {
         List<String> args = Stream.concat(
                 Stream.of(normalize(table.getPrimaryColumnName())),
                 values.stream().map((e) -> normalize(e.field().name()))
@@ -114,14 +126,14 @@ public abstract class Base extends Driver {
         String SQL = "INSERT INTO " + normalize(table.getTableName())
                 + " (" + String.join(", ", args)
                 + ") VALUES (" + placeholders + ")";
-        execute(SQL, objects.toArray());
+        return new Action(this, SQL, objects.toArray());
     }
 
     @Override
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void dropEntry(
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action dropEntry(
             Table<T, P> table,
             P primaryField
-    ) throws SQLException {
+    ) {
         Encoder.EncodedObject eo = Encoder.encode(
                 primaryField,
                 table,
@@ -130,7 +142,7 @@ public abstract class Base extends Driver {
 
         String SQL = "DELETE FROM " + normalize(table.getTableName())
                 + " WHERE " + normalize(table.getPrimaryColumnName()) + " = ?";
-        execute(SQL, eo == null ? null : eo.encoded());
+        return new Action(this, SQL, eo == null ? null : eo.encoded());
     }
 
     @Override
@@ -166,44 +178,60 @@ public abstract class Base extends Driver {
     }
 
     @Override
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> V get(
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> GetAction<V> get(
             Table<T, P> table,
             P primaryField,
             Field<T, V> field
-    ) throws SQLException {
+    ) {
         String SQL = "SELECT " + normalize(field.name())
                 + " FROM " + normalize(table.getTableName())
                 + " WHERE " + normalize(table.getPrimaryColumnName()) + " = ?";
         Encoder.EncodedObject p = Encoder.encode(primaryField, table, table.getPrimaryColumn());
         Object primary = p == null ? null : p.encoded();
 
-        try (QueryResult res = executeGet(SQL, primary)) {
-            ResultSet rs = res.rs();
-            if (!rs.next())
-                return null;
-            return (V) Encoder.decode(getObject(rs, field.name()), table, field);
-        }
+        return new GetAction<>(
+                this,
+                SQL,
+                qr -> {
+                    ResultSet rs = qr.rs();
+                    if (!rs.next())
+                        return null;
+                    return (V) Encoder.decode(getObject(rs, field.name()), table, field);
+                },
+                false,
+                primary
+        );
     }
 
     @Override
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> InputStream
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> GetAction<InputStream>
     getAsInputStream(
             Table<T, P> table,
             P primaryField,
             Field<T, V> field
-    ) throws SQLException {
+    ) {
         String SQL = "SELECT " + normalize(field.name())
                 + " FROM " + normalize(table.getTableName())
                 + " WHERE " + normalize(table.getPrimaryColumnName()) + " = ?";
         Encoder.EncodedObject p = Encoder.encode(primaryField, table, table.getPrimaryColumn());
         Object primary = p == null ? null : p.encoded();
 
-        try (QueryResult res = executeGet(SQL, primary)) {
-            ResultSet rs = res.rs();
-            if (!rs.next())
-                return null;
-            return rs.getBinaryStream(field.name());
-        }
+        return new GetAction<>(
+                this,
+                SQL,
+                qr -> {
+                    ResultSet rs = qr.rs();
+                    if (!rs.next()) return null;
+                    InputStream rawStream = rs.getBinaryStream(field.name());
+
+                    return new PermanentInputStream(
+                            rawStream,
+                            qr.ps()
+                    );
+                },
+                true,
+                primary
+        );
     }
 
     @Override
@@ -328,11 +356,11 @@ public abstract class Base extends Driver {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void set(
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action set(
             Table<T, P> table,
             P primaryField,
             List<FieldEntry<T, ?, ?>> values
-    ) throws SQLException {
+    ) {
         List<String> args = values.stream()
                 .map(e -> normalize(e.field().name()) + " = ?")
                 .toList();
@@ -352,7 +380,7 @@ public abstract class Base extends Driver {
         Object primary = p == null ? null : p.encoded();
         Object[] params = Stream.concat(objects.stream(), Stream.of(primary)).toArray();
 
-        execute(SQL, params);
+        return new Action(this, SQL, params);
     }
 
     @SuppressWarnings("unchecked")
@@ -368,91 +396,88 @@ public abstract class Base extends Driver {
 
     @Override
     public void createTable(
+            ConnectedDatabase.Exposed exposed,
             String tableId,
             List<PredefinedColumn> columns,
             boolean deleteUnspecifiedColumns
     ) throws SQLException {
-        beginTransaction();
-        try {
-            Map<String, ExistingColumn> existing = getExistingColumns(tableId);
-            if (existing.isEmpty()) {
-                execute(buildCreateSql(columns, tableId));
-                commitTransaction();
-                return;
-            }
-            boolean rebuildTable = false;
-            Map<String, ExistingColumn> existingColumns = new HashMap<>(Map.copyOf(existing));
-
-            for (PredefinedColumn column : columns) {
-                ExistingColumn c = existingColumns.get(column.name());
-                if (c == null) {
-                    rebuildTable = true;
-                    break;
-                }
-
-                existingColumns.remove(column.name());
-                if (c.primaryKey() != column.primaryKey()
-                        || c.nullable() != column.nullable()
-                        || !c.type().equalsIgnoreCase(mapType(column))
-                ) {
-                    rebuildTable = true;
-                    break;
-                }
-            }
-
-            if (!existingColumns.isEmpty() && deleteUnspecifiedColumns) {
-                rebuildTable = true;
-            }
-
-            if (!rebuildTable) {
-                for (PredefinedColumn c : columns) {
-                    if (!existing.containsKey(c.name())) {
-                        addColumn(tableId, c);
-                    }
-                }
-                commitTransaction();
-                return;
-            }
-
-            String tempTable = tableId + "_tmp";
-            execute(buildCreateSql(columns, tempTable));
-            Objects.requireNonNull(existing);
-            List<String> shared = columns.stream()
-                    .map(PredefinedColumn::name)
-                    .filter(existing::containsKey).toList();
-            if (!shared.isEmpty()) {
-                copyData(tableId, tempTable, shared);
-            }
-
-            dropTable(tableId);
-            renameTable(tempTable, tableId);
-            commitTransaction();
-        } catch (SQLException e) {
-            rollbackTransaction();
-            throw e;
+        final Bucket bucket = new Bucket(exposed);
+        Map<String, ExistingColumn> existing = getExistingColumns(tableId);
+        if (existing.isEmpty()) {
+            bucket.add(new Action(this, buildCreateSql(columns, tableId)));
+            bucket.execute().complete();
+            return;
         }
+        boolean rebuildTable = false;
+        Map<String, ExistingColumn> existingColumns = new HashMap<>(Map.copyOf(existing));
+
+        for (PredefinedColumn column : columns) {
+            ExistingColumn c = existingColumns.get(column.name());
+            if (c == null) {
+                rebuildTable = true;
+                break;
+            }
+
+            existingColumns.remove(column.name());
+            if (c.primaryKey() != column.primaryKey()
+                    || c.nullable() != column.nullable()
+                    || !c.type().equalsIgnoreCase(mapType(column))
+            ) {
+                rebuildTable = true;
+                break;
+            }
+        }
+
+        if (!existingColumns.isEmpty() && deleteUnspecifiedColumns) {
+            rebuildTable = true;
+        }
+
+        if (!rebuildTable) {
+            for (PredefinedColumn c : columns) {
+                if (!existing.containsKey(c.name())) {
+                    bucket.add(addColumn(tableId, c));
+                }
+            }
+            bucket.execute().complete();
+            return;
+        }
+
+        String tempTable = tableId + "_tmp";
+        bucket.add(new Action(this, buildCreateSql(columns, tempTable)));
+        Objects.requireNonNull(existing);
+        List<String> shared = columns.stream()
+                .map(PredefinedColumn::name)
+                .filter(existing::containsKey).toList();
+        if (!shared.isEmpty()) {
+            bucket.add(copyData(tableId, tempTable, shared));
+        }
+
+        bucket.add(dropTable(tableId));
+        bucket.add(renameTable(tempTable, tableId));
+        bucket.execute().complete();
     }
 
     @Override
-    public void copyData(String oldTable, String newTable, List<String> columnsToCopy) throws SQLException {
+    public Action copyData(String oldTable, String newTable, List<String> columnsToCopy) {
         String cols = columnsToCopy.stream()
                 .map(this::normalize)
                 .collect(Collectors.joining(", "));
-        execute(
+        return new Action(
+                this,
                 "INSERT INTO " + normalize(newTable)
-                        + " (" + cols + ") SELECT " + cols
-                        + " FROM " + normalize(oldTable)
+                + " (" + cols + ") SELECT " + cols
+                + " FROM " + normalize(oldTable)
         );
     }
 
     @Override
-    public void commitTransaction() throws SQLException {
-        execute("COMMIT");
+    public Action commitTransaction() {
+        return new Action(this, "COMMIT");
     }
 
     @Override
-    public void rollbackTransaction() throws SQLException {
-        execute("ROLLBACK");
+    public Action rollbackTransaction() {
+        return new Action(this, "ROLLBACK");
     }
 
     protected abstract String buildCreateSql(List<PredefinedColumn> columns, String tableName);

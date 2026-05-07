@@ -4,12 +4,14 @@ import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.ExceptionHandler;
 import dev.blitical.jigsawDB.Tests;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
+import dev.blitical.jigsawDB.drivers.DriverType;
 import dev.blitical.jigsawDB.tables.NoCachingTable;
 import dev.blitical.jigsawDB.tables.NoCachingTable.TestEnum;
 import dev.blitical.jigsawDB.tables.NoCachingTableFields;
 import dev.blitical.jigsawDB.util.JSONClass;
 import dev.blitical.jigsawDB.util.SerializableClass;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -103,6 +105,9 @@ public class SetAndGetTests {
                 String string = e.getValue();
                 entry.set(NoCachingTableFields.string, string).queue();
                 String compare = entry.get(NoCachingTableFields.string).complete();
+                if (compare != null && d.getDriverType().equals(DriverType.PostgreSQL)) {
+                    string = string.replace("\u0000", "");
+                }
                 if (!string.equals(compare)) {
                     throw new IllegalStateException(String.format("Mismatch database values in testing 'string': \"%s\" != \"%s\"", string, compare));
                 }
@@ -333,6 +338,7 @@ public class SetAndGetTests {
 
     }
 
+
     @Test
     void binaryInputStreamSetAndGet() {
         for (ConnectedDatabase d : Tests.databases) {
@@ -357,7 +363,9 @@ public class SetAndGetTests {
                 byte[] buffer = new byte[8192];
 
                 int read;
-                while ((read = stream.read(buffer)) != -1) {
+                while (true) {
+                    Assertions.assertNotNull(stream);
+                    if ((read = stream.read(buffer)) == -1) break;
                     digest.update(buffer, 0, read);
                 }
 

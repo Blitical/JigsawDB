@@ -1,14 +1,14 @@
 package dev.blitical.jigsawDB.value;
 
 import dev.blitical.jigsawDB.ConnectedDatabase;
+import dev.blitical.jigsawDB.value.util.SupplierWithException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class ExecutableFutureNullable<T> extends ExecutableFuture<T> {
-    public ExecutableFutureNullable(ConnectedDatabase.Exposed exposed, Supplier<T> executable) {
+    public ExecutableFutureNullable(ConnectedDatabase.Exposed exposed, SupplierWithException<T> executable) {
         super(exposed, executable);
     }
 
@@ -22,7 +22,11 @@ public class ExecutableFutureNullable<T> extends ExecutableFuture<T> {
     }
 
     public @Nullable T complete(boolean shouldQueue) {
-        return shouldQueue ? queue.safeQueue(this) : executable.get();
+        try {
+            return shouldQueue ? queue.safeQueue(this) : executable.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public @Nullable T complete() {

@@ -35,6 +35,8 @@ confidence**!
     - Everything is done automatically, and these encoding types are highly configurable.
     - You can even request your own encoding types in our Discord [here](https://discord.gg/nKAZa796ua) (or contribute
       your own in a PR)
+- **Bucketing**
+    - We have support for buckets and batch executions so your database won't get bombarded with requests.
 - **Building & executing SQL**
     - Lastly and most importantly, actually reliably parsing and executing SQL.
     - Our main focus is to eliminate developers' need to write any SQL, allowing them to query and write to their

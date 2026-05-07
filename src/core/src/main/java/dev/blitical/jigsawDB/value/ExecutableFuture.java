@@ -3,17 +3,17 @@ package dev.blitical.jigsawDB.value;
 import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.config.JigsawDBConfig;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
+import dev.blitical.jigsawDB.value.util.SupplierWithException;
 import org.jetbrains.annotations.CheckReturnValue;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Range;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class ExecutableFuture<T> {
     protected final QueueManager queue;
-    protected final Supplier<T> executable;
+    protected final SupplierWithException<T> executable;
     protected @NotNull Consumer<@NotNull T> success = _ -> {
     };
     protected @NotNull Consumer<Throwable> failure =
@@ -22,7 +22,7 @@ public class ExecutableFuture<T> {
     protected Long timeout;
     protected TimeUnit timeoutUnit;
 
-    public ExecutableFuture(ConnectedDatabase.Exposed exposed, Supplier<T> executable) {
+    public ExecutableFuture(ConnectedDatabase.Exposed exposed, SupplierWithException<T> executable) {
         this.executable = executable;
         timeout = JigsawDBConfig.ExecutableFuture.TIMEOUT_CONFIG.duration();
         timeoutUnit = JigsawDBConfig.ExecutableFuture.TIMEOUT_CONFIG.unit();
@@ -36,7 +36,11 @@ public class ExecutableFuture<T> {
     }
 
     public @NotNull T complete(boolean shouldQueue) {
-        return shouldQueue ? queue.safeQueue(this) : executable.get();
+        try {
+            return shouldQueue ? queue.safeQueue(this) : executable.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public @NotNull T complete() {

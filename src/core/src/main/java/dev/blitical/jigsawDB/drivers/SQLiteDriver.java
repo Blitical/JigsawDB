@@ -1,20 +1,12 @@
 package dev.blitical.jigsawDB.drivers;
 
-import dev.blitical.jigsawDB.ConnectedDatabase;
-import dev.blitical.jigsawDB.cache.CacheHandler;
-import dev.blitical.jigsawDB.config.JigsawDBLogger;
+import dev.blitical.jigsawDB.drivers.action.Action;
 import dev.blitical.jigsawDB.drivers.hierarchy.Base;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
 import dev.blitical.jigsawDB.encoder.Encoder;
-import dev.blitical.jigsawDB.entry.Entry;
 import dev.blitical.jigsawDB.entry.Field;
-import dev.blitical.jigsawDB.entry.FieldEntry;
-import dev.blitical.jigsawDB.entry.selector.EntrySelector;
-import dev.blitical.jigsawDB.entry.selector.condition.Condition;
-import dev.blitical.jigsawDB.entry.selector.condition.ConditionManager;
-import dev.blitical.jigsawDB.entry.selector.util.OrderType;
 import dev.blitical.jigsawDB.table.Table;
 
 import java.io.IOException;
@@ -22,11 +14,13 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.*;
-import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class SQLiteDriver extends Base {
     public SQLiteDriver(String path) {
@@ -50,6 +44,11 @@ public class SQLiteDriver extends Base {
         if (connection == null || connection.isClosed()) {
             connection = DriverManager.getConnection(url);
         }
+    }
+
+    @Override
+    public DriverType driverType() {
+        return DriverType.SQLite;
     }
 
     private static Path resolveAndValidate(Path path) {
@@ -106,18 +105,18 @@ public class SQLiteDriver extends Base {
     }
 
     @Override
-    public void addColumn(String table, PredefinedColumn column) throws SQLException {
-        execute("ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
+    public Action addColumn(String table, PredefinedColumn column) {
+        return new Action(this, "ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
     }
 
     @Override
-    public void renameTable(String oldTable, String newTable) throws SQLException {
-        execute("ALTER TABLE " + normalize(oldTable) + " RENAME TO " + normalize(newTable));
+    public Action renameTable(String oldTable, String newTable) {
+        return new Action(this, "ALTER TABLE " + normalize(oldTable) + " RENAME TO " + normalize(newTable));
     }
 
     @Override
-    public void dropTable(String table) throws SQLException {
-        execute("DROP TABLE " + normalize(table));
+    public Action dropTable(String table) {
+        return new Action(this, "DROP TABLE " + normalize(table));
     }
 
     @Override
@@ -131,13 +130,13 @@ public class SQLiteDriver extends Base {
     }
 
     @Override
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action
     setWithInputStream(
             Table<T, P> table,
             P primaryField,
             Field<T, V> field,
             InputStream stream
-    ) throws SQLException {
+    ) {
         String sql = "UPDATE " + normalize(table.getTableName()) +
                 " SET " + normalize(field.name()) + " = ?" +
                 " WHERE " + normalize(table.getPrimaryColumnName()) + " = ?";
@@ -145,18 +144,19 @@ public class SQLiteDriver extends Base {
         Encoder.EncodedObject p = Encoder.encode(primaryField, table, table.getPrimaryColumn());
         Object primary = p == null ? null : p.encoded();
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setBytes(1, stream.readAllBytes());
-            ps.setObject(2, primary);
-            ps.executeUpdate();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return new Action(this, sql, ps -> {
+            try {
+                ps.setBytes(1, stream.readAllBytes());
+                ps.setObject(2, primary);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override
-    public void beginTransaction() throws SQLException {
-        execute("BEGIN TRANSACTION");
+    public Action beginTransaction() {
+        return new Action(this, "BEGIN TRANSACTION");
     }
 
     @Override

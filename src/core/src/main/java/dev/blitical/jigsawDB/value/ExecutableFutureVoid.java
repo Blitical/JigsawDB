@@ -2,6 +2,7 @@ package dev.blitical.jigsawDB.value;
 
 import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
+import dev.blitical.jigsawDB.value.util.RunnableWithException;
 import org.jetbrains.annotations.CheckReturnValue;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Range;
@@ -12,7 +13,7 @@ import java.util.function.Consumer;
 public class ExecutableFutureVoid {
     private final ExecutableFuture<Void> executableFuture;
 
-    public ExecutableFutureVoid(ConnectedDatabase.Exposed exposed, Runnable executable) {
+    public ExecutableFutureVoid(ConnectedDatabase.Exposed exposed, RunnableWithException executable) {
         this.executableFuture = new ExecutableFuture<>(
                 exposed,
                 () -> {

@@ -7,10 +7,13 @@ import dev.blitical.jigsawDB.cache.CachePolicy;
 import dev.blitical.jigsawDB.cache.CachedMap;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.Driver;
+import dev.blitical.jigsawDB.drivers.DriverType;
+import dev.blitical.jigsawDB.drivers.action.Bucket;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.encoder.Encoder;
 import dev.blitical.jigsawDB.entry.Entry;
 import dev.blitical.jigsawDB.entry.FieldEntry;
+import dev.blitical.jigsawDB.entry.InitialValueExecutor;
 import dev.blitical.jigsawDB.entry.selector.WithWhere;
 import dev.blitical.jigsawDB.exceptions.compile.DuplicatePrimaryColumnException;
 import dev.blitical.jigsawDB.exceptions.compile.NoPrimaryColumnException;
@@ -33,6 +36,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 public class ConnectedDatabase {
     private static final Set<ConnectedDatabase> CONNECTED_DATABASES = ConcurrentHashMap.newKeySet();
@@ -192,6 +196,7 @@ public class ConnectedDatabase {
         }
 
         driver.createTable(
+                exposed,
                 table.getTableName(),
                 predefinedColumns,
                 true
@@ -218,6 +223,14 @@ public class ConnectedDatabase {
         }
     }
 
+    public String getFormattedName() {
+        return driver.formatedName();
+    }
+
+    public DriverType getDriverType() {
+        return driver.driverType();
+    }
+
     public void awaitShutdown() {
         this.shuttingDown.set(true);
         this.queueManager.get().awaitShutdown();
@@ -237,6 +250,10 @@ public class ConnectedDatabase {
         CompletableFuture.runAsync(this::awaitShutdown);
     }
 
+    public Bucket createBucket() {
+        return new Bucket(exposed);
+    }
+
     @CheckReturnValue
     public <T extends Table<T, P>, P> ExecutableFutureNullable<@Nullable Entry<T, P>>
     getEntry(Class<T> clazz, P id) {
@@ -247,7 +264,7 @@ public class ConnectedDatabase {
             return new ExecutableFutureNullable<>(exposed, () -> null);
 
         return new ExecutableFutureNullable<>(exposed, () -> {
-            var entry = new Entry<>(exposed, table, id, false);
+            var entry = new Entry<>(exposed, table, id, false, null);
             return entry.exists ? entry : null;
         });
     }
@@ -255,6 +272,12 @@ public class ConnectedDatabase {
     @CheckReturnValue
     public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
     getOrCreateEntry(Class<T> clazz, P id) {
+        return getOrCreateEntry(clazz, id, null);
+    }
+
+    @CheckReturnValue
+    public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
+    getOrCreateEntry(Class<T> clazz, P id, Function<InitialValueExecutor<T, P>, InitialValueExecutor.Built<T, P>> initialValues) {
         @SuppressWarnings("unchecked")
         Table<T, P> table = (Table<T, P>) tables.get(clazz);
 
@@ -262,7 +285,7 @@ public class ConnectedDatabase {
             throw new TableNotInitializedException(clazz.getSimpleName());
 
         return new ExecutableFuture<>(exposed, () ->
-                new Entry<>(exposed, table, id, true)
+            new Entry<>(exposed, table, id, true, initialValues)
         );
     }
 
@@ -281,7 +304,7 @@ public class ConnectedDatabase {
     @CheckReturnValue
     @SuppressWarnings("unchecked")
     public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
-    createEntry(Class<T> clazz, P id) {
+    createEntry(Class<T> clazz, P id, Function<InitialValueExecutor<T, P>, InitialValueExecutor.Built<T, P>> initialValuesBuilder) {
         Table<T, P> table = (Table<T, P>) tables.get(clazz);
 
         if (table == null)
@@ -290,49 +313,74 @@ public class ConnectedDatabase {
         return new ExecutableFutureNullable<>(
                 exposed,
                 () -> {
-                    try {
-                        List<FieldEntry<T, ?, ?>> values = new ArrayList<>();
+                    List<FieldEntry<T, ?, ?>> values = new ArrayList<>();
 
-                        table.getConfig().columns().forEach((f, c) -> {
-                            var defaultValue = c.asDefinedConfig().defaultValue();
-                            if (defaultValue != null) {
-                                values.add(
-                                        new FieldEntry<>(
-                                                table,
-                                                (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
-                                                defaultValue
-                                        )
-                                );
-                            }
-                        });
+                    Map<String, InitialValueExecutor.InitialValue<T, ?>> initialValues
+                            = initialValuesBuilder == null
+                            ? Map.of()
+                            : initialValuesBuilder.apply(new InitialValueExecutor<>(exposed)).values();
 
-                        driver.createEntry(table, id, values);
+                    table.getConfig().columns().forEach((f, c) -> {
+                        var defaultValue = c.asDefinedConfig().defaultValue();
+                        if (defaultValue != null) {
+                            values.add(
+                                    new FieldEntry<>(
+                                            table,
+                                            (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
+                                            defaultValue
+                                    )
+                            );
+                        }
+                    });
 
-                        table.getConfig().columns().forEach((f, c) -> {
-                            var defaultValue = c.asDefinedConfig().defaultValue();
-                            if (defaultValue != null) {
-                                CacheHandler.putCachedValue(
-                                        exposed,
-                                        table,
-                                        id,
-                                        (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
-                                        defaultValue
-                                );
-                            }
-                        });
+                    initialValues.forEach((_, iv) -> {
+                        if (iv != null) {
+                            values.add(
+                                    new FieldEntry<>(
+                                            table,
+                                            (dev.blitical.jigsawDB.entry.Field<T, Object>) iv.field(),
+                                            iv.value()
+                                    )
+                            );
+                        }
+                    });
 
-                        return new Entry<>(exposed, table, id, false);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    driver.createEntry(table, id, values).execute(exposed);
+
+                    table.getConfig().columns().forEach((f, c) -> {
+                        var defaultValue = c.asDefinedConfig().defaultValue();
+                        if (defaultValue != null) {
+                            CacheHandler.putCachedValue(
+                                    exposed,
+                                    table,
+                                    id,
+                                    (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
+                                    defaultValue
+                            );
+                        }
+                    });
+
+                    initialValues.forEach((_, iv) -> {
+                        if (iv != null) {
+                            CacheHandler.putCachedValue(
+                                    exposed,
+                                    table,
+                                    id,
+                                    (dev.blitical.jigsawDB.entry.Field<T, Object>) iv.field(),
+                                    iv.value()
+                            );
+                        }
+                    });
+
+                    return new Entry<>(exposed, table, id, false, null);
                 });
     }
 
-    public void breakDatabase() {
+    public void breakDatabaseFromCache() {
         cachedMap.breakDatabase(uuid);
     }
 
-    public <T extends Table<T, ?>> void breakTable(
+    public <T extends Table<T, ?>> void breakTableFromCache(
             Class<T> clazz
     ) {
         @SuppressWarnings("unchecked")
@@ -343,7 +391,7 @@ public class ConnectedDatabase {
         cachedMap.breakTable(uuid, table);
     }
 
-    public <T extends Table<T, P>, P> void breakEntry(
+    public <T extends Table<T, P>, P> void breakEntryFromCache(
             Class<T> clazz,
             P primaryKey
     ) {
@@ -355,7 +403,7 @@ public class ConnectedDatabase {
         cachedMap.breakEntry(uuid, table, primaryKey);
     }
 
-    public <T extends Table<T, P>, P, F extends dev.blitical.jigsawDB.entry.Field<T, V>, V> void breakValue(
+    public <T extends Table<T, P>, P, F extends dev.blitical.jigsawDB.entry.Field<T, V>, V> void breakFieldFromCache(
             Class<T> clazz,
             P primaryKey,
             dev.blitical.jigsawDB.entry.Field<T, V> field

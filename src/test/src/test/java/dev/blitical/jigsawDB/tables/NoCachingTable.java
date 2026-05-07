@@ -3,6 +3,7 @@ package dev.blitical.jigsawDB.tables;
 import dev.blitical.jigsawDB.annotations.Column;
 import dev.blitical.jigsawDB.annotations.Parse;
 import dev.blitical.jigsawDB.annotations.PrimaryColumn;
+import dev.blitical.jigsawDB.cache.CachePolicy;
 import dev.blitical.jigsawDB.encoder.ParseType;
 import dev.blitical.jigsawDB.table.Table;
 import dev.blitical.jigsawDB.table.TableConfig;
@@ -62,6 +63,6 @@ public class NoCachingTable extends Table<NoCachingTable, UUID> {
     }
 
     protected void configure(TableConfig<NoCachingTable> config) {
-        //config.cachePolicy(CachePolicy.NONE());
+        config.cachePolicy(CachePolicy.NONE());
     }
 }

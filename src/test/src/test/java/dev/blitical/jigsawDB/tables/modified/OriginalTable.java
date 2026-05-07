@@ -3,8 +3,10 @@ package dev.blitical.jigsawDB.tables.modified;
 import dev.blitical.jigsawDB.annotations.Column;
 import dev.blitical.jigsawDB.annotations.Parse;
 import dev.blitical.jigsawDB.annotations.PrimaryColumn;
+import dev.blitical.jigsawDB.cache.CachePolicy;
 import dev.blitical.jigsawDB.encoder.ParseType;
 import dev.blitical.jigsawDB.table.Table;
+import dev.blitical.jigsawDB.table.TableConfig;
 import dev.blitical.jigsawDB.tables.NoCachingTable;
 import dev.blitical.jigsawDB.util.JSONClass;
 import dev.blitical.jigsawDB.util.SerializableClass;
@@ -52,4 +54,9 @@ public class OriginalTable extends Table<OriginalTable, UUID> {
 
     @Column("image")
     byte[] image;
+
+    @Override
+    protected void configure(TableConfig<OriginalTable> config) {
+        config.cachePolicy(CachePolicy.NONE());
+    }
 }

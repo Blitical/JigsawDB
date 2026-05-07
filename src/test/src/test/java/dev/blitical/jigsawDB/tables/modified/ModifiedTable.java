@@ -2,6 +2,7 @@ package dev.blitical.jigsawDB.tables.modified;
 
 import dev.blitical.jigsawDB.annotations.Column;
 import dev.blitical.jigsawDB.annotations.PrimaryColumn;
+import dev.blitical.jigsawDB.cache.CachePolicy;
 import dev.blitical.jigsawDB.table.Table;
 import dev.blitical.jigsawDB.table.TableConfig;
 
@@ -24,5 +25,6 @@ public class ModifiedTable extends Table<ModifiedTable, UUID> {
     @Override
     protected void configure(TableConfig<ModifiedTable> config) {
         config.setTableName("original_table");
+        config.cachePolicy(CachePolicy.NONE());
     }
 }

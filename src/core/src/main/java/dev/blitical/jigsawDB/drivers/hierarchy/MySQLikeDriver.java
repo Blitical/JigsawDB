@@ -1,5 +1,6 @@
 package dev.blitical.jigsawDB.drivers.hierarchy;
 
+import dev.blitical.jigsawDB.drivers.action.Action;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
@@ -9,14 +10,12 @@ import dev.blitical.jigsawDB.table.Table;
 
 import java.io.InputStream;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * This is the {@code Base} class. <br>
@@ -46,13 +45,13 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action
     setWithInputStream(
             Table<T, P> table,
             P primaryField,
             Field<T, V> field,
             InputStream stream
-    ) throws SQLException {
+    ) {
         String sql = "UPDATE " + normalize(table.getTableName()) +
                 " SET " + normalize(field.name()) + " = ?" +
                 " WHERE " + normalize(table.getPrimaryColumnName()) + " = ?";
@@ -60,11 +59,10 @@ public abstract class MySQLikeDriver extends Base {
         Encoder.EncodedObject p = Encoder.encode(primaryField, table, table.getPrimaryColumn());
         Object primary = p == null ? null : p.encoded();
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        return new Action(this, sql, ps -> {
             ps.setBinaryStream(1, stream);
             ps.setObject(2, primary);
-            ps.executeUpdate();
-        }
+        });
     }
 
     @Override
@@ -96,8 +94,8 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    public void addColumn(String table, PredefinedColumn column) throws SQLException {
-        execute("ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
+    public Action addColumn(String table, PredefinedColumn column) {
+        return new Action(this, "ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
     }
 
     protected String buildColumnSql(PredefinedColumn col) {
@@ -153,16 +151,16 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    public void renameTable(String oldTable, String newTable) throws SQLException {
-        execute("RENAME TABLE " + normalize(oldTable) + " TO " + normalize(newTable));
+    public Action renameTable(String oldTable, String newTable) {
+        return new Action(this, "RENAME TABLE " + normalize(oldTable) + " TO " + normalize(newTable));
     }
 
     @Override
-    public void dropTable(String table) throws SQLException {
-        execute("DROP TABLE IF EXISTS " + normalize(table));
+    public Action dropTable(String table) {
+        return new Action(this, "DROP TABLE IF EXISTS " + normalize(table));
     }
 
-    public void beginTransaction() throws SQLException {
-        execute("START TRANSACTION");
+    public Action beginTransaction() {
+        return new Action(this, "START TRANSACTION");
     }
 }

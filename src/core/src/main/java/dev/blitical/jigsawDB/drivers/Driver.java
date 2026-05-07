@@ -1,6 +1,8 @@
 package dev.blitical.jigsawDB.drivers;
 
 import dev.blitical.jigsawDB.ConnectedDatabase;
+import dev.blitical.jigsawDB.drivers.action.Action;
+import dev.blitical.jigsawDB.drivers.action.GetAction;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
@@ -13,6 +15,7 @@ import dev.blitical.jigsawDB.table.Table;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.io.InputStream;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +33,11 @@ public abstract class Driver {
     @ApiStatus.Internal
     public abstract void close() throws SQLException;
     @ApiStatus.Internal
+    public abstract Connection getConnection();
+    @ApiStatus.Internal
     public abstract String formatedName();
+    @ApiStatus.Internal
+    public abstract DriverType driverType();
     @ApiStatus.Internal
     public abstract boolean isOpen() throws SQLException;
     @ApiStatus.Internal
@@ -46,42 +53,42 @@ public abstract class Driver {
     @ApiStatus.Internal
     public abstract Map<String, ExistingColumn> getExistingColumns(String table) throws SQLException;
     @ApiStatus.Internal
-    public abstract void addColumn(String table, PredefinedColumn column) throws SQLException;
+    public abstract Action addColumn(String table, PredefinedColumn column);
 
     @ApiStatus.Internal
-    public abstract void renameTable(String oldTable, String newTable) throws SQLException;
+    public abstract Action renameTable(String oldTable, String newTable);
     @ApiStatus.Internal
-    public abstract void dropTable(String table) throws SQLException;
+    public abstract Action dropTable(String table);
 
     @ApiStatus.Internal
-    public abstract void copyData(String oldTable, String newTable, List<String> columnsToCopy) throws SQLException;
+    public abstract Action copyData(String oldTable, String newTable, List<String> columnsToCopy);
 
     // Column Value Payloads
     @ApiStatus.Internal
-    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> void createEntry(Table<T, P> table, P primaryField, List<FieldEntry<T, ?, ?>> values) throws SQLException;
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> Action createEntry(Table<T, P> table, P primaryField, List<FieldEntry<T, ?, ?>> values);
     @ApiStatus.Internal
-    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> void dropEntry(Table<T, P> table, P primaryField) throws SQLException;
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> Action dropEntry(Table<T, P> table, P primaryField);
     @ApiStatus.Internal
     public abstract <T extends Table<T, P>, P, F extends Field<T, ?>> boolean checkEntryAndCache(Table<T, P> table, Entry<T, P> entry, F[] fields, BiConsumer<Field<T, ?>, Object> cacheHandler)throws SQLException;
     @ApiStatus.Internal
-    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> void set(Table<T, P> table, P primaryField, List<FieldEntry<T, ?, ?>> values) throws SQLException;
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> Action set(Table<T, P> table, P primaryField, List<FieldEntry<T, ?, ?>> values);
     @ApiStatus.Internal
-    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> V get(Table<T, P> table, P primaryField, Field<T, V> field) throws SQLException;
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> GetAction<V> get(Table<T, P> table, P primaryField, Field<T, V> field);
     @ApiStatus.Internal
-    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> void setWithInputStream(Table<T, P> table, P primaryField, Field<T, V> field, InputStream value) throws SQLException;
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> Action setWithInputStream(Table<T, P> table, P primaryField, Field<T, V> field, InputStream value);
     @ApiStatus.Internal
-    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> InputStream getAsInputStream(Table<T, P> table, P primaryField, Field<T, V> field) throws SQLException;
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> GetAction<InputStream> getAsInputStream(Table<T, P> table, P primaryField, Field<T, V> field);
     @ApiStatus.Internal
     public abstract <T extends Table<T, P>, P, F extends Field<T, ?>> List<Entry<T, P>> getSpecified(ConnectedDatabase.Exposed database, Table<T, P> table, Condition<T> condition, List<EntrySelector.SortBy> sortBy, Integer limit, Set<F> fields) throws SQLException;
 
     // Transaction Payloads
     @ApiStatus.Internal
-    public abstract void beginTransaction() throws SQLException;
+    public abstract Action beginTransaction();
     @ApiStatus.Internal
-    public abstract void commitTransaction() throws SQLException;
+    public abstract Action commitTransaction();
     @ApiStatus.Internal
-    public abstract void rollbackTransaction() throws SQLException;
+    public abstract Action rollbackTransaction();
 
     @ApiStatus.Internal
-    public abstract void createTable(String var1, List<PredefinedColumn> var2, boolean var3) throws SQLException;
+    public abstract void createTable(ConnectedDatabase.Exposed exposed, String tableId, List<PredefinedColumn> columns, boolean deleteUnspecifiedColumns) throws SQLException;
 }

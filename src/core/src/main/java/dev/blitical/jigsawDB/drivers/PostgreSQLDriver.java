@@ -1,6 +1,7 @@
 package dev.blitical.jigsawDB.drivers;
 
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
+import dev.blitical.jigsawDB.drivers.action.Action;
 import dev.blitical.jigsawDB.drivers.hierarchy.Base;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
@@ -15,7 +16,6 @@ import org.jetbrains.annotations.ApiStatus;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -23,8 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import static dev.blitical.jigsawDB.encoder.Encoder.resolveParseType;
 
 @ApiStatus.Experimental
 public class PostgreSQLDriver extends Base {
@@ -66,6 +64,11 @@ public class PostgreSQLDriver extends Base {
     }
 
     @Override
+    public DriverType driverType() {
+        return DriverType.PostgreSQL;
+    }
+
+    @Override
     public Map<String, ExistingColumn> getExistingColumns(String table) throws SQLException {
         Map<String, ExistingColumn> columns = new HashMap<>();
 
@@ -94,23 +97,23 @@ public class PostgreSQLDriver extends Base {
     }
 
     @Override
-    public void addColumn(String table, PredefinedColumn column) throws SQLException {
-        execute("ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
+    public Action addColumn(String table, PredefinedColumn column) {
+        return new Action(this, "ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
     }
 
     @Override
-    public void renameTable(String oldTable, String newTable) throws SQLException {
-        execute("ALTER TABLE " + normalize(oldTable) + " RENAME TO " + normalize(newTable));
+    public Action renameTable(String oldTable, String newTable) {
+        return new Action(this, "ALTER TABLE " + normalize(oldTable) + " RENAME TO " + normalize(newTable));
     }
 
     @Override
-    public void dropTable(String table) throws SQLException {
-        execute("DROP TABLE IF EXISTS " + normalize(table));
+    public Action dropTable(String table) {
+        return new Action(this, "DROP TABLE IF EXISTS " + normalize(table));
     }
 
     @Override
-    public void beginTransaction() throws SQLException {
-        execute("BEGIN");
+    public Action beginTransaction() {
+        return new Action(this, "BEGIN");
     }
 
     @Override
@@ -171,11 +174,11 @@ public class PostgreSQLDriver extends Base {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void set(
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action set(
             Table<T, P> table,
             P primaryField,
             List<FieldEntry<T, ?, ?>> values
-    ) throws SQLException {
+    ) {
         List<String> args = values.stream()
                 .map(e -> normalize(e.field().name()) + " = ?")
                 .toList();
@@ -215,16 +218,16 @@ public class PostgreSQLDriver extends Base {
         Object primary = p == null ? null : p.encoded();
         Object[] params = Stream.concat(objects.stream(), Stream.of(primary)).toArray();
 
-        execute(SQL, params);
+        return new Action(this, SQL, params);
     }
 
     @Override
-    public <T extends Table<T, P>, P, F extends Field<T, V>, V> void setWithInputStream(
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> Action setWithInputStream(
             Table<T, P> table,
             P primaryField,
             Field<T, V> field,
             InputStream stream
-    ) throws SQLException {
+    ) {
 
         String sql = "UPDATE " + normalize(table.getTableName()) +
                 " SET " + normalize(field.name()) + " = ?" +
@@ -233,13 +236,14 @@ public class PostgreSQLDriver extends Base {
         Encoder.EncodedObject p = Encoder.encode(primaryField, table, table.getPrimaryColumn());
         Object primary = p == null ? null : p.encoded();
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setBytes(1, stream.readAllBytes());
-            ps.setObject(2, primary);
-            ps.executeUpdate();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return new Action(this, sql, ps -> {
+            try {
+                ps.setBytes(1, stream.readAllBytes());
+                ps.setObject(2, primary);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override

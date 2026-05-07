@@ -1,7 +1,6 @@
 package dev.blitical.jigsawDB.encoder.encoderTypes;
 
 import dev.blitical.jigsawDB.annotations.Column;
-import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.encoder.Encoder;
 import dev.blitical.jigsawDB.encoder.ParseType;
 import dev.blitical.jigsawDB.exceptions.encoder.IllegalDecodeException;
@@ -58,12 +57,10 @@ public class BinaryEncoder {
 
     public static Encoder.CheckResult check(Encoder.CheckContext context) {
         String type = context.type().toString();
-        JigsawDBLogger.warn(type);
 
         for (var entry : ParseType.PREDEFINED_TYPES.entrySet()) {
             for (Class<?> clazz : entry.getValue()) {
                 String name = getName(clazz);
-                JigsawDBLogger.warn(name);
                 if (name.equals(type)) {
                     return Encoder.CheckResult.PASS;
                 }
