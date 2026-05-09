@@ -51,9 +51,9 @@ public abstract class Driver {
 
     // Table Payloads
     @ApiStatus.Internal
-    public abstract Map<String, ExistingColumn> getExistingColumns(String table) throws SQLException;
+    public abstract <T extends Table<T, ?>> Map<String, ExistingColumn> getExistingColumns(Table<T, ?> table) throws SQLException;
     @ApiStatus.Internal
-    public abstract Action addColumn(String table, PredefinedColumn column);
+    public abstract <T extends Table<T, ?>> Action addColumn(Table<T, ?> table, PredefinedColumn column);
 
     @ApiStatus.Internal
     public abstract Action renameTable(String oldTable, String newTable);
@@ -90,5 +90,5 @@ public abstract class Driver {
     public abstract Action rollbackTransaction();
 
     @ApiStatus.Internal
-    public abstract void createTable(ConnectedDatabase.Exposed exposed, String tableId, List<PredefinedColumn> columns, boolean deleteUnspecifiedColumns) throws SQLException;
+    public abstract <T extends Table<T, ?>> void createTable(ConnectedDatabase.Exposed exposed, Table<T, ?> table, List<PredefinedColumn> columns, boolean deleteUnspecifiedColumns) throws SQLException;
 }

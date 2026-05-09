@@ -84,7 +84,8 @@ public class SQLiteDriver extends Base {
 
 
     @Override
-    public Map<String, ExistingColumn> getExistingColumns(String table) throws SQLException {
+    public <T extends Table<T, ?>> Map<String, ExistingColumn> getExistingColumns(Table<T, ?> tbl) throws SQLException {
+        String table = tbl.getTableName();
         Map<String, ExistingColumn> columns = new HashMap<>();
         try (QueryResult qr = executeGet("PRAGMA table_info(" + table + ")")) {
             ResultSet rs = qr.rs();
@@ -105,8 +106,8 @@ public class SQLiteDriver extends Base {
     }
 
     @Override
-    public Action addColumn(String table, PredefinedColumn column) {
-        return new Action(this, "ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
+    public <T extends Table<T, ?>> Action addColumn(Table<T, ?> table, PredefinedColumn column) {
+        return new Action(this, "ALTER TABLE " + normalize(table.getTableName()) + " ADD COLUMN " + buildColumnSql(table, column));
     }
 
     @Override
@@ -120,7 +121,7 @@ public class SQLiteDriver extends Base {
     }
 
     @Override
-    protected String mapType(PredefinedColumn column) {
+    protected <T extends Table<T, ?>> String mapType(Table<T, ?> table, PredefinedColumn column) {
         return switch (Encoder.resolveEncodedType(column.field())) {
             case STRING -> "STRING";
             case BLOB -> "BLOB";
@@ -160,7 +161,7 @@ public class SQLiteDriver extends Base {
     }
 
     @Override
-    protected String buildCreateSql(List<PredefinedColumn> columns, String tableName) {
+    protected <T extends Table<T, ?>> String buildCreateSql(Table<T, ?> table, List<PredefinedColumn> columns, String tableName) {
         StringBuilder sql = new StringBuilder();
         sql.append("CREATE TABLE IF NOT EXISTS ")
                 .append(normalize(tableName))
@@ -168,7 +169,7 @@ public class SQLiteDriver extends Base {
         List<String> defs = new ArrayList<>();
 
         for (PredefinedColumn col : columns) {
-            defs.add(buildColumnSql(col));
+            defs.add(buildColumnSql(table, col));
         }
 
         sql.append(String.join(", ", defs));
@@ -176,9 +177,9 @@ public class SQLiteDriver extends Base {
         return sql.toString();
     }
 
-    private String buildColumnSql(PredefinedColumn col) {
+    private <T extends Table<T, ?>> String buildColumnSql(Table<T, ?> table, PredefinedColumn col) {
         StringBuilder sql = new StringBuilder(normalize(col.name()))
-                .append(" ").append(mapType(col));
+                .append(" ").append(mapType(table, col));
 
         if (!col.nullable()) {
             sql.append(" NOT NULL");

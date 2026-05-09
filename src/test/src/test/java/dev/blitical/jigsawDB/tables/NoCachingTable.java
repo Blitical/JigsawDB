@@ -4,6 +4,7 @@ import dev.blitical.jigsawDB.annotations.Column;
 import dev.blitical.jigsawDB.annotations.Parse;
 import dev.blitical.jigsawDB.annotations.PrimaryColumn;
 import dev.blitical.jigsawDB.cache.CachePolicy;
+import dev.blitical.jigsawDB.drivers.types.ColumnTypes;
 import dev.blitical.jigsawDB.encoder.ParseType;
 import dev.blitical.jigsawDB.table.Table;
 import dev.blitical.jigsawDB.table.TableConfig;
@@ -54,7 +55,7 @@ public class NoCachingTable extends Table<NoCachingTable, UUID> {
     @Column("image")
     byte[] image;
 
-    public static enum TestEnum {
+    public enum TestEnum {
         ONE,
         TWO,
         THREE,
@@ -64,5 +65,11 @@ public class NoCachingTable extends Table<NoCachingTable, UUID> {
 
     protected void configure(TableConfig<NoCachingTable> config) {
         config.cachePolicy(CachePolicy.NONE());
+
+        config.column(NoCachingTableFields.image)
+                .columnType(ColumnTypes.mediumBlob());
+
+        config.column(NoCachingTableFields.testEnumString)
+                .columnType(ColumnTypes.varchar(5));
     }
 }

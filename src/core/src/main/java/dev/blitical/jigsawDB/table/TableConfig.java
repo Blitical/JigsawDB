@@ -3,10 +3,7 @@ package dev.blitical.jigsawDB.table;
 import dev.blitical.jigsawDB.cache.CachePolicy;
 import dev.blitical.jigsawDB.entry.Field;
 import dev.blitical.jigsawDB.entry.fields.*;
-import dev.blitical.jigsawDB.table.columnConfigs.GenericColumnConfig;
-import dev.blitical.jigsawDB.table.columnConfigs.NumberColumnConfig;
-import dev.blitical.jigsawDB.table.columnConfigs.PrimaryGenericColumnConfig;
-import dev.blitical.jigsawDB.table.columnConfigs.PrimaryIntegerColumnConfig;
+import dev.blitical.jigsawDB.table.columnConfigs.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -68,6 +65,14 @@ public class TableConfig<E extends Table<E, ?>> {
         return (PrimaryIntegerColumnConfig<T>) columns.computeIfAbsent(
                 field,
                 _ -> new PrimaryIntegerColumnConfig<>()
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <T> BinaryColumnConfig<T> column(BinaryField<E, T> field) {
+        return (BinaryColumnConfig<T>) columns.computeIfAbsent(
+                field,
+                _ -> new BinaryColumnConfig<>()
         );
     }
 

@@ -1,5 +1,6 @@
 package dev.blitical.jigsawDB.table.columnConfigs;
 
+import dev.blitical.jigsawDB.drivers.types.definition.NumberTypeDefinition;
 import dev.blitical.jigsawDB.table.ColumnConfig;
 
 public class NumberColumnConfig<T> extends ColumnConfig<T> {
@@ -16,6 +17,11 @@ public class NumberColumnConfig<T> extends ColumnConfig<T> {
 
     public NumberColumnConfig<T> unique(boolean unique) {
         this.unique = unique;
+        return this;
+    }
+
+    public ColumnConfig<T> columnType(NumberTypeDefinition type) {
+        this.typeDefinition = type;
         return this;
     }
 }

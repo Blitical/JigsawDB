@@ -6,6 +6,8 @@ import dev.blitical.jigsawDB.drivers.hierarchy.Base;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
+import dev.blitical.jigsawDB.drivers.types.TypeDefinition;
+import dev.blitical.jigsawDB.drivers.types.TypeDefinitionResolver;
 import dev.blitical.jigsawDB.encoder.Encoder;
 import dev.blitical.jigsawDB.encoder.ParseType;
 import dev.blitical.jigsawDB.entry.Field;
@@ -23,6 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import static java.lang.Math.clamp;
 
 @ApiStatus.Experimental
 public class PostgreSQLDriver extends Base {
@@ -69,7 +73,8 @@ public class PostgreSQLDriver extends Base {
     }
 
     @Override
-    public Map<String, ExistingColumn> getExistingColumns(String table) throws SQLException {
+    public <T extends Table<T, ?>> Map<String, ExistingColumn> getExistingColumns(Table<T, ?> tbl) throws SQLException {
+        String table = tbl.getTableName();
         Map<String, ExistingColumn> columns = new HashMap<>();
 
         try (QueryResult qr = executeGet("""
@@ -97,8 +102,8 @@ public class PostgreSQLDriver extends Base {
     }
 
     @Override
-    public Action addColumn(String table, PredefinedColumn column) {
-        return new Action(this, "ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
+    public <T extends Table<T, ?>> Action addColumn(Table<T, ?> table, PredefinedColumn column) {
+        return new Action(this, "ALTER TABLE " + normalize(table.getTableName()) + " ADD COLUMN " + buildColumnSql(table, column));
     }
 
     @Override
@@ -117,17 +122,40 @@ public class PostgreSQLDriver extends Base {
     }
 
     @Override
-    protected String mapType(PredefinedColumn column) {
-        return switch (Encoder.resolveEncodedType(column.field())) {
-            case STRING -> column.primaryKey() ? "VARCHAR(255)" : "TEXT";
-            case BLOB -> "BYTEA";
-            case REAL -> "DOUBLE PRECISION";
-            case INTEGER -> "BIGINT";
+    protected <T extends Table<T, ?>> String mapType(Table<T, ?> table, PredefinedColumn column) {
+        TypeDefinition type = TypeDefinitionResolver.resolve(table, column.name());
+
+        return switch (type.type()) {
+            case VARCHAR -> {
+                int max = column.primaryKey() ? 768 : 16383;
+                int len = type.length() != null ? type.length() : 255;
+                yield "VARCHAR(" + clamp(len, 1, max) + ")";
+            }
+
+            case CHAR -> {
+                int len = type.length() != null ? type.length() : 1;
+                yield "CHAR(" + clamp(len, 1, 255) + ")";
+            }
+
+            case DECIMAL, NUMERIC -> {
+                int p = type.precision() != null ? type.precision() : 10;
+                int s = type.scale() != null ? type.scale() : 0;
+                yield "NUMERIC(" + p + "," + s + ")";
+            }
+
+            case TEXT, TINYTEXT, MEDIUMTEXT, LONGTEXT, JSON -> "TEXT";
+            case UUID -> "VARCHAR(36)";
+            case TINYINT, SMALLINT -> "SMALLINT";
+            case MEDIUMINT, INTEGER -> "INTEGER";
+            case FLOAT -> "REAL";
+            case DOUBLE -> "DOUBLE PRECISION";
+            case BINARY, VARBINARY, BLOB, TINYBLOB, MEDIUMBLOB, LONGBLOB -> "BYTEA";
+            case BOOLEAN, BIGINT, BIT -> type.type().name();
         };
     }
 
     @Override
-    protected String buildCreateSql(List<PredefinedColumn> columns, String tableName) {
+    protected <T extends Table<T, ?>> String buildCreateSql(Table<T, ?> table, List<PredefinedColumn> columns, String tableName) {
         StringBuilder sql = new StringBuilder();
         sql.append("CREATE TABLE IF NOT EXISTS ")
                 .append(normalize(tableName))
@@ -135,7 +163,7 @@ public class PostgreSQLDriver extends Base {
         List<String> defs = new ArrayList<>();
 
         for (PredefinedColumn col : columns) {
-            defs.add(buildColumnSql(col));
+            defs.add(buildColumnSql(table, col));
         }
 
         sql.append(String.join(", ", defs));
@@ -143,11 +171,11 @@ public class PostgreSQLDriver extends Base {
         return sql.toString();
     }
 
-    private String buildColumnSql(PredefinedColumn col) {
+    private <T extends Table<T, ?>> String buildColumnSql(Table<T, ?> table, PredefinedColumn col) {
         StringBuilder sql = new StringBuilder()
                 .append(normalize(col.name()))
                 .append(" ")
-                .append(mapType(col));
+                .append(mapType(table, col));
 
         if (col.primaryKey()) {
             sql.append(" PRIMARY KEY");

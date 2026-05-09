@@ -1,8 +1,11 @@
 package dev.blitical.jigsawDB.table.columnConfigs;
 
+import dev.blitical.jigsawDB.drivers.types.definition.BinaryTypeDefinition;
 import dev.blitical.jigsawDB.table.ColumnConfig;
 
 public class BinaryColumnConfig<T> extends ColumnConfig<T> {
-    // You can't really configure a binary config...
-    // I'll think about it
+    public ColumnConfig<T> columnType(BinaryTypeDefinition type) {
+        this.typeDefinition = type;
+        return this;
+    }
 }

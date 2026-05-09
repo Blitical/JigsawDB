@@ -4,6 +4,7 @@ import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.cache.CacheHandler;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.Driver;
+import dev.blitical.jigsawDB.drivers.DriverType;
 import dev.blitical.jigsawDB.drivers.action.Action;
 import dev.blitical.jigsawDB.drivers.action.Bucket;
 import dev.blitical.jigsawDB.drivers.action.GetAction;
@@ -395,16 +396,17 @@ public abstract class Base extends Driver {
     }
 
     @Override
-    public void createTable(
+    public <T extends Table<T, ?>> void createTable(
             ConnectedDatabase.Exposed exposed,
-            String tableId,
+            Table<T, ?> table,
             List<PredefinedColumn> columns,
             boolean deleteUnspecifiedColumns
     ) throws SQLException {
+        final String tableId = table.getTableName();
         final Bucket bucket = new Bucket(exposed);
-        Map<String, ExistingColumn> existing = getExistingColumns(tableId);
+        Map<String, ExistingColumn> existing = getExistingColumns(table);
         if (existing.isEmpty()) {
-            bucket.add(new Action(this, buildCreateSql(columns, tableId)));
+            bucket.add(new Action(this, buildCreateSql(table, columns, tableId)));
             bucket.execute().complete();
             return;
         }
@@ -421,7 +423,7 @@ public abstract class Base extends Driver {
             existingColumns.remove(column.name());
             if (c.primaryKey() != column.primaryKey()
                     || c.nullable() != column.nullable()
-                    || !c.type().equalsIgnoreCase(mapType(column))
+                    || !c.type().equalsIgnoreCase(mapType(table, column))
             ) {
                 rebuildTable = true;
                 break;
@@ -435,7 +437,7 @@ public abstract class Base extends Driver {
         if (!rebuildTable) {
             for (PredefinedColumn c : columns) {
                 if (!existing.containsKey(c.name())) {
-                    bucket.add(addColumn(tableId, c));
+                    bucket.add(addColumn(table, c));
                 }
             }
             bucket.execute().complete();
@@ -443,13 +445,14 @@ public abstract class Base extends Driver {
         }
 
         String tempTable = tableId + "_tmp";
-        bucket.add(new Action(this, buildCreateSql(columns, tempTable)));
+        bucket.add(new Action(this, buildCreateSql(table, columns, tempTable)));
+
         Objects.requireNonNull(existing);
-        List<String> shared = columns.stream()
-                .map(PredefinedColumn::name)
-                .filter(existing::containsKey).toList();
+        List<PredefinedColumn> shared = columns.stream()
+                .filter(c -> existing.containsKey(c.name()))
+                .toList();
         if (!shared.isEmpty()) {
-            bucket.add(copyData(tableId, tempTable, shared));
+            bucket.add(castCopyData(table, tempTable, shared));
         }
 
         bucket.add(dropTable(tableId));
@@ -470,6 +473,28 @@ public abstract class Base extends Driver {
         );
     }
 
+    public <T extends Table<T, ?>> Action castCopyData(Table<T, ?> table, String newTable, List<PredefinedColumn> columnsToCopy) {
+        String cols = columnsToCopy.stream()
+                .map(c -> normalize(c.name()))
+                .collect(Collectors.joining(", "));
+        String casted = columnsToCopy.stream()
+                .map(c -> {
+                    if (!driverType().equals(DriverType.PostgreSQL))
+                        return normalize(c.name());
+                    JigsawDBLogger.warn(normalize(c.name()) + "::" + mapType(table, c)
+                            .replaceAll("\\(.\\)", ""));
+                    return normalize(c.name()) + "::" + mapType(table, c)
+                            .replaceAll("\\(.\\)", "");
+                })
+                .collect(Collectors.joining(", "));
+        return new Action(
+                this,
+                "INSERT INTO " + normalize(newTable)
+                        + " (" + cols + ") SELECT " + casted
+                        + " FROM " + normalize(table.getTableName())
+        );
+    }
+
     @Override
     public Action commitTransaction() {
         return new Action(this, "COMMIT");
@@ -480,8 +505,8 @@ public abstract class Base extends Driver {
         return new Action(this, "ROLLBACK");
     }
 
-    protected abstract String buildCreateSql(List<PredefinedColumn> columns, String tableName);
-    protected abstract String mapType(PredefinedColumn column);
+    protected abstract <T extends Table<T, ?>> String buildCreateSql(Table<T, ?> table, List<PredefinedColumn> columns, String tableName);
+    protected abstract <T extends Table<T, ?>> String mapType(Table<T, ?> table, PredefinedColumn column);
 
     public Object getObject(ResultSet rs, String columnName) throws SQLException {
         return rs.getObject(columnName);

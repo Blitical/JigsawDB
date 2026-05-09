@@ -58,6 +58,15 @@ public abstract class Table<T extends Table<T, P>, P> {
         return null;
     }
 
+    public final Field<T, ?> getFieldByName(String name) {
+        for (Field<T, ?> field : getAllFields()) {
+            if (field.name().equals(name)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
     public Set<Field<T, ?>> getAllFields() {
         return fields;
     }
@@ -131,7 +140,8 @@ public abstract class Table<T extends Table<T, P>, P> {
 
     public final DefinedColumnConfig<?> getFieldConfig(Field<T, ?> field) {
         var columns = getConfig().columns();
-        return columns.get(field).asDefinedConfig();
+        ColumnConfig<?> config = columns.get(field);
+        return config == null ? null : config.asDefinedConfig();
     }
 
     public final TableConfig.Exposed<T> getConfig() {

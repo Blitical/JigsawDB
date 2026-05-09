@@ -1,5 +1,6 @@
 package dev.blitical.jigsawDB.table.columnConfigs;
 
+import dev.blitical.jigsawDB.drivers.types.definition.PrimaryIntegerTypeDefinition;
 import dev.blitical.jigsawDB.table.ColumnConfig;
 
 public class PrimaryIntegerColumnConfig<T> extends ColumnConfig<T> {
@@ -17,5 +18,10 @@ public class PrimaryIntegerColumnConfig<T> extends ColumnConfig<T> {
 
     public ColumnConfig<T> autoIncrement() {
         return autoIncrement(true);
+    }
+
+    public ColumnConfig<T> columnType(PrimaryIntegerTypeDefinition type) {
+        this.typeDefinition = type;
+        return this;
     }
 }

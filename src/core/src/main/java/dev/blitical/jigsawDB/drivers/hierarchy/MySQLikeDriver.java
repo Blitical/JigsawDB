@@ -4,6 +4,8 @@ import dev.blitical.jigsawDB.drivers.action.Action;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
+import dev.blitical.jigsawDB.drivers.types.TypeDefinition;
+import dev.blitical.jigsawDB.drivers.types.TypeDefinitionResolver;
 import dev.blitical.jigsawDB.encoder.Encoder;
 import dev.blitical.jigsawDB.entry.Field;
 import dev.blitical.jigsawDB.table.Table;
@@ -16,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static java.lang.Math.clamp;
 
 /**
  * This is the {@code Base} class. <br>
@@ -66,7 +70,8 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    public Map<String, ExistingColumn> getExistingColumns(String table) throws SQLException {
+    public <T extends Table<T, ?>> Map<String, ExistingColumn> getExistingColumns(Table<T, ?> tbl) throws SQLException {
+        String table = tbl.getTableName();
         Map<String, ExistingColumn> columns = new HashMap<>();
 
         try (QueryResult qr = executeGet("""
@@ -94,13 +99,13 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    public Action addColumn(String table, PredefinedColumn column) {
-        return new Action(this, "ALTER TABLE " + normalize(table) + " ADD COLUMN " + buildColumnSql(column));
+    public <T extends Table<T, ?>> Action addColumn(Table<T, ?> table, PredefinedColumn column) {
+        return new Action(this, "ALTER TABLE " + normalize(table.getTableName()) + " ADD COLUMN " + buildColumnSql(table, column));
     }
 
-    protected String buildColumnSql(PredefinedColumn col) {
+    protected <T extends Table<T, ?>> String buildColumnSql(Table<T, ?> table, PredefinedColumn col) {
         StringBuilder sql = new StringBuilder(normalize(col.name()))
-                .append(" ").append(mapType(col));
+                .append(" ").append(mapType(table, col));
 
         if (!col.nullable()) {
             sql.append(" NOT NULL");
@@ -126,13 +131,13 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    protected String buildCreateSql(List<PredefinedColumn> columns, String tableName) {
+    protected <T extends Table<T, ?>> String buildCreateSql(Table<T, ?> table, List<PredefinedColumn> columns, String tableName) {
         StringBuilder sql = new StringBuilder();
         sql.append("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" (");
         List<String> defs = new ArrayList<>();
 
         for (PredefinedColumn col : columns) {
-            defs.add(buildColumnSql(col));
+            defs.add(buildColumnSql(table, col));
         }
 
         sql.append(String.join(", ", defs));
@@ -141,12 +146,49 @@ public abstract class MySQLikeDriver extends Base {
     }
 
     @Override
-    protected String mapType(PredefinedColumn column) {
-        return switch (Encoder.resolveEncodedType(column.field())) {
-            case STRING -> column.primaryKey() ? "VARCHAR(768)" : "LONGTEXT";
-            case BLOB -> "LONGBLOB";
-            case REAL -> "DOUBLE";
-            case INTEGER -> "BIGINT";
+    protected <T extends Table<T, ?>> String mapType(Table<T, ?> table, PredefinedColumn column) {
+        TypeDefinition type = TypeDefinitionResolver.resolve(table, column.name());
+
+        return switch (type.type()) {
+            case VARCHAR -> {
+                int max = column.primaryKey() ? 768 : 16383;
+                int len = type.length() != null ? type.length() : 255;
+                yield "VARCHAR(" + clamp(len, 1, max) + ")";
+            }
+
+            case CHAR -> {
+                int len = type.length() != null ? type.length() : 1;
+                yield "CHAR(" + clamp(len, 1, 255) + ")";
+            }
+
+            case BINARY -> {
+                int len = type.length() != null ? type.length() : 1;
+                yield "BINARY(" + clamp(len, 1, Integer.MAX_VALUE) + ")";
+            }
+
+            case VARBINARY -> {
+                int len = type.length() != null ? type.length() : 255;
+                yield "VARBINARY(" + clamp(len, 1, Integer.MAX_VALUE) + ")";
+            }
+
+            case DECIMAL -> {
+                int p = type.precision() != null ? type.precision() : 10;
+                int s = type.scale() != null ? type.scale() : 0;
+                yield "DECIMAL(" + p + "," + s + ")";
+            }
+
+            case NUMERIC -> {
+                int p = type.precision() != null ? type.precision() : 10;
+                int s = type.scale() != null ? type.scale() : 0;
+                yield "NUMERIC(" + p + "," + s + ")";
+            }
+
+            case UUID -> "CHAR(36)";
+
+            case TEXT, TINYTEXT, MEDIUMTEXT, LONGTEXT, BLOB,
+                 TINYBLOB, MEDIUMBLOB, LONGBLOB, TINYINT, INTEGER,
+                 SMALLINT, MEDIUMINT, BIGINT, FLOAT, DOUBLE, BIT,
+                 BOOLEAN, JSON -> type.type().name();
         };
     }
 

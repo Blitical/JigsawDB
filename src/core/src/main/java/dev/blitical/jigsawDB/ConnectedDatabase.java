@@ -197,7 +197,7 @@ public class ConnectedDatabase {
 
         driver.createTable(
                 exposed,
-                table.getTableName(),
+                table,
                 predefinedColumns,
                 true
         );
