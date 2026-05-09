@@ -6,6 +6,8 @@ dev.blitical.jigsawDB.drivers
 dev.blitical.jigsawDB.drivers.action
 dev.blitical.jigsawDB.drivers.hierarchy
 dev.blitical.jigsawDB.drivers.misc
+dev.blitical.jigsawDB.drivers.types
+dev.blitical.jigsawDB.drivers.types.definition
 dev.blitical.jigsawDB.encoder
 dev.blitical.jigsawDB.encoder.encoderTypes
 dev.blitical.jigsawDB.entry
