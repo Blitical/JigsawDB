@@ -28,11 +28,6 @@ public class TableManipulationTests {
                         .set(OriginalTableFields.longValue, LONG)
                         .build()
             ).complete();
-            /*entry.batch()
-                    .set(OriginalTableFields.string, STRING)
-                    .set(OriginalTableFields.integer, INTEGER)
-                    .set(OriginalTableFields.longValue, LONG)
-                    .fetch().complete();*/
         });
         Tests.destroy(false);
         Tests.createDatabases(d -> d.addTable(new ModifiedTable()));

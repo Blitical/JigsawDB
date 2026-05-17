@@ -10,18 +10,21 @@ public class JigsawDBAction {
     protected final Driver driver;
     protected final String SQL;
     protected final SQLConsumer<PreparedStatement> setter;
+    protected final int[] statementFlags;
 
     protected JigsawDBAction(
             Driver driver,
             String SQL,
-            SQLConsumer<PreparedStatement> setter
+            SQLConsumer<PreparedStatement> setter,
+            int[] statementFlags
     ) {
         this.driver = driver;
         this.SQL = SQL;
         this.setter = setter;
+        this.statementFlags = statementFlags;
     }
 
-    protected static PreparedStatement prepare(
+    public static PreparedStatement prepare(
             PreparedStatement ps,
             Object... args
     ) throws SQLException {

@@ -2,8 +2,11 @@ package dev.blitical.jigsawDB.table;
 
 import dev.blitical.jigsawDB.drivers.types.TypeDefinition;
 
+import java.util.function.Supplier;
+
 public class ColumnConfig<T> {
-    protected T defaultValue = null;
+    protected Supplier<T> defaultSupplier = () -> null;
+    protected boolean supplierConstant = false;
     protected boolean nullable = true;
     protected boolean unique = false;
     protected boolean autoIncrement = false;
@@ -11,7 +14,8 @@ public class ColumnConfig<T> {
 
     public DefinedColumnConfig<T> asDefinedConfig() {
         return new DefinedColumnConfig<>(
-                defaultValue,
+                defaultSupplier,
+                supplierConstant,
                 nullable,
                 unique,
                 autoIncrement,

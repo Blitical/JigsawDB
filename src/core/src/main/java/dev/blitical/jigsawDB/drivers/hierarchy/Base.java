@@ -5,9 +5,7 @@ import dev.blitical.jigsawDB.cache.CacheHandler;
 import dev.blitical.jigsawDB.config.JigsawDBLogger;
 import dev.blitical.jigsawDB.drivers.Driver;
 import dev.blitical.jigsawDB.drivers.DriverType;
-import dev.blitical.jigsawDB.drivers.action.Action;
-import dev.blitical.jigsawDB.drivers.action.Bucket;
-import dev.blitical.jigsawDB.drivers.action.GetAction;
+import dev.blitical.jigsawDB.drivers.action.*;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PermanentInputStream;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
@@ -23,10 +21,7 @@ import dev.blitical.jigsawDB.entry.selector.util.OrderType;
 import dev.blitical.jigsawDB.table.Table;
 
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -128,6 +123,47 @@ public abstract class Base extends Driver {
                 + " (" + String.join(", ", args)
                 + ") VALUES (" + placeholders + ")";
         return new Action(this, SQL, objects.toArray());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Table<T, P>, P, F extends Field<T, V>, V> PreparedStatementGetAction<P> createEntry(
+            Table<T, P> table,
+            List<FieldEntry<T, ?, ?>> values
+    ) {
+        List<String> args = values.stream().map((e) -> normalize(e.field().name())).toList();
+
+        List<Object> objects = new ArrayList<>();
+        String placeholders = Stream.generate(() -> "?")
+                .limit(args.size())
+                .collect(Collectors.joining(", "));
+
+        values.forEach((e) -> {
+            Encoder.EncodedObject eo = Encoder.encode((V) e.value(), table, (Field<T, V>) e.field());
+            objects.add(eo == null ? null : eo.encoded());
+        });
+
+        String SQL;
+        if (args.isEmpty() && Set.of(DriverType.SQLite, DriverType.PostgreSQL).contains(driverType())) {
+            JigsawDBLogger.debug(driverType());
+            SQL = "INSERT INTO " + normalize(table.getTableName()) + " DEFAULT VALUES";
+        } else {
+            SQL = "INSERT INTO " + normalize(table.getTableName())
+                    + " (" + String.join(", ", args)
+                    + ") VALUES (" + placeholders + ")";
+        }
+
+        return new PreparedStatementGetAction<>(
+                this,
+                SQL,
+                ps -> {
+                    ResultSet rs = ps.getGeneratedKeys();
+                    rs.next();
+                    return (P) rs.getObject(1);
+                },
+                ps -> JigsawDBAction.prepare(ps, args.toArray()),
+                Statement.RETURN_GENERATED_KEYS
+        );
     }
 
     @Override
@@ -481,8 +517,6 @@ public abstract class Base extends Driver {
                 .map(c -> {
                     if (!driverType().equals(DriverType.PostgreSQL))
                         return normalize(c.name());
-                    JigsawDBLogger.warn(normalize(c.name()) + "::" + mapType(table, c)
-                            .replaceAll("\\(.\\)", ""));
                     return normalize(c.name()) + "::" + mapType(table, c)
                             .replaceAll("\\(.\\)", "");
                 })

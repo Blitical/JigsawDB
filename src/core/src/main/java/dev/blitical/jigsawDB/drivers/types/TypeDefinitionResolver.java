@@ -12,7 +12,7 @@ public class TypeDefinitionResolver {
         assert field != null; // Should NEVER happen (hopefully)
 
         DefinedColumnConfig<?> config = table.getFieldConfig(field);
-        if (config == null) {
+        if (config == null || config.typeDefinition() == null) {
             return fallback(table, field);
         }
         return config.typeDefinition();

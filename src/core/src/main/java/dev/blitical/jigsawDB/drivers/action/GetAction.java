@@ -27,7 +27,7 @@ public final class GetAction<V> extends JigsawDBAction {
             boolean isInputStream,
             Object... args
     ) {
-        super(driver, (SQL.endsWith(";") ? SQL : SQL + ";"), ps -> prepare(ps, args));
+        super(driver, (SQL.endsWith(";") ? SQL : SQL + ";"), ps -> prepare(ps, args), new int[]{});
         this.interpreter = interpreter;
         this.isInputStream = isInputStream;
     }
@@ -37,9 +37,10 @@ public final class GetAction<V> extends JigsawDBAction {
             String SQL,
             QueryResultFunction<QueryResult, V> interpreter,
             boolean isInputStream,
-            SQLConsumer<PreparedStatement> setter
+            SQLConsumer<PreparedStatement> setter,
+            int... statementFlags
     ) {
-        super(driver, (SQL.endsWith(";") ? SQL : SQL + ";"), setter);
+        super(driver, (SQL.endsWith(";") ? SQL : SQL + ";"), setter, statementFlags);
         this.interpreter = interpreter;
         this.isInputStream = isInputStream;
     }
@@ -52,18 +53,18 @@ public final class GetAction<V> extends JigsawDBAction {
     @ApiStatus.Internal
     public V execute(ConnectedDatabase.Exposed exposed) throws SQLException {
         if (!this.driver.equals(exposed.driver())) {
-            throw new IllegalArgumentException("execute() can only ba called internally (Mismatch in drivers)");
+            throw new IllegalArgumentException("execute() can only be called internally (Mismatch in drivers)");
         }
 
         JigsawDBLogger.sql(SQL);
         if (!isInputStream) {
-            try (PreparedStatement ps = this.driver.getConnection().prepareStatement(SQL)) {
+            try (PreparedStatement ps = this.driver.getConnection().prepareStatement(SQL, statementFlags)) {
                 return get(ps);
             }
         }
 
         // If it's an InputStream, keep the connection open
-        PreparedStatement ps = this.driver.getConnection().prepareStatement(SQL);
+        PreparedStatement ps = this.driver.getConnection().prepareStatement(SQL, statementFlags);
         try {
             return get(ps);
         } catch (Exception e) {

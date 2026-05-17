@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 public class ConnectedDatabase {
@@ -179,7 +180,7 @@ public class ConnectedDatabase {
             predefinedColumns.add(new PredefinedColumn(
                     field.getAnnotation(Column.class).value(),
                     field,
-                    columnConfig.defaultValue(),
+                    columnConfig.supplierConstant() ? columnConfig.defaultSupplier().get() : null,
                     formatDefault(field, columnConfig),
                     columnConfig.nullable(),
                     columnConfig.unique(),
@@ -204,7 +205,7 @@ public class ConnectedDatabase {
     }
 
     private <T> String formatDefault(Field field, DefinedColumnConfig<T> columnConfig) {
-        T defaultValue = columnConfig.defaultValue();
+        T defaultValue = columnConfig.supplierConstant() ? columnConfig.defaultSupplier().get() : null;
         if (defaultValue == null) return "NULL";
 
         return switch (Encoder.resolveParseType(field)) {
@@ -303,6 +304,12 @@ public class ConnectedDatabase {
 
     @CheckReturnValue
     public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
+    createEntry(Class<T> clazz) {
+        return createEntry(clazz, null, null);
+    }
+
+    @CheckReturnValue
+    public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
     createEntry(Class<T> clazz, P id) {
         return createEntry(clazz, id, null);
     }
@@ -310,7 +317,7 @@ public class ConnectedDatabase {
     @CheckReturnValue
     @SuppressWarnings("unchecked")
     public <T extends Table<T, P>, P> @NotNull ExecutableFuture<@NotNull Entry<T, P>>
-    createEntry(Class<T> clazz, P id, Function<InitialValueExecutor<T, P>, InitialValueExecutor.Built<T, P>> initialValuesBuilder) {
+    createEntry(Class<T> clazz, @Nullable P id, Function<InitialValueExecutor<T, P>, InitialValueExecutor.Built<T, P>> initialValuesBuilder) {
         Table<T, P> table = (Table<T, P>) tables.get(clazz);
 
         if (table == null)
@@ -319,6 +326,23 @@ public class ConnectedDatabase {
         return new ExecutableFutureNullable<>(
                 exposed,
                 () -> {
+                    ColumnConfig<P> columnConfig = (ColumnConfig<P>) table.getConfig()
+                            .columns()
+                            .get(table.getPrimaryColumn());
+                    DefinedColumnConfig<P> defaultConfig = columnConfig == null
+                            ? null
+                            : columnConfig.asDefinedConfig();
+
+                    boolean isAutoIncrement = defaultConfig != null && defaultConfig.autoIncrement();
+                    P resolvedId = id == null
+                            ? (defaultConfig == null ? null : defaultConfig.defaultSupplier().get())
+                            : id;
+                    if (resolvedId == null) {
+                        if (!isAutoIncrement) {
+                            throw new IllegalArgumentException("No default value is defined - could not create entry");
+                        }
+                    }
+
                     List<FieldEntry<T, ?, ?>> values = new ArrayList<>();
 
                     Map<String, InitialValueExecutor.InitialValue<T, ?>> initialValues
@@ -327,7 +351,7 @@ public class ConnectedDatabase {
                             : initialValuesBuilder.apply(new InitialValueExecutor<>(exposed)).values();
 
                     table.getConfig().columns().forEach((f, c) -> {
-                        var defaultValue = c.asDefinedConfig().defaultValue();
+                        var defaultValue = c.asDefinedConfig().supplierConstant() ? c.asDefinedConfig().defaultSupplier().get() : null;
                         if (defaultValue != null) {
                             values.add(
                                     new FieldEntry<>(
@@ -351,15 +375,20 @@ public class ConnectedDatabase {
                         }
                     });
 
-                    driver.createEntry(table, id, values).execute(exposed);
+                    AtomicReference<P> primaryKey = new AtomicReference<>(resolvedId);
+                    if (isAutoIncrement) {
+                        driver.createEntry(table, values).onGet(primaryKey::set).execute(exposed);
+                    } else {
+                        driver.createEntry(table, resolvedId, values).execute(exposed);
+                    }
 
                     table.getConfig().columns().forEach((f, c) -> {
-                        var defaultValue = c.asDefinedConfig().defaultValue();
+                        var defaultValue = c.asDefinedConfig().supplierConstant() ? c.asDefinedConfig().defaultSupplier().get() : null;
                         if (defaultValue != null) {
                             CacheHandler.putCachedValue(
                                     exposed,
                                     table,
-                                    id,
+                                    primaryKey.get(),
                                     (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
                                     defaultValue
                             );
@@ -371,14 +400,14 @@ public class ConnectedDatabase {
                             CacheHandler.putCachedValue(
                                     exposed,
                                     table,
-                                    id,
+                                    primaryKey.get(),
                                     (dev.blitical.jigsawDB.entry.Field<T, Object>) iv.field(),
                                     iv.value()
                             );
                         }
                     });
 
-                    return new Entry<>(exposed, table, id, false, null);
+                    return new Entry<>(exposed, table, primaryKey.get(), false, null);
                 });
     }
 

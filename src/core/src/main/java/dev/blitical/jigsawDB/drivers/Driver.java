@@ -3,6 +3,7 @@ package dev.blitical.jigsawDB.drivers;
 import dev.blitical.jigsawDB.ConnectedDatabase;
 import dev.blitical.jigsawDB.drivers.action.Action;
 import dev.blitical.jigsawDB.drivers.action.GetAction;
+import dev.blitical.jigsawDB.drivers.action.PreparedStatementGetAction;
 import dev.blitical.jigsawDB.drivers.misc.ExistingColumn;
 import dev.blitical.jigsawDB.drivers.misc.PredefinedColumn;
 import dev.blitical.jigsawDB.drivers.misc.QueryResult;
@@ -66,6 +67,8 @@ public abstract class Driver {
     // Column Value Payloads
     @ApiStatus.Internal
     public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> Action createEntry(Table<T, P> table, P primaryField, List<FieldEntry<T, ?, ?>> values);
+    @ApiStatus.Internal
+    public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> PreparedStatementGetAction<P> createEntry(Table<T, P> table, List<FieldEntry<T, ?, ?>> values);
     @ApiStatus.Internal
     public abstract <T extends Table<T, P>, P, F extends Field<T, V>, V> Action dropEntry(Table<T, P> table, P primaryField);
     @ApiStatus.Internal
