@@ -11,16 +11,16 @@ public class PrimaryIntegerColumnConfig<T> extends ColumnConfig<T> {
         this.nullable = false;
     }
 
-    public ColumnConfig<T> autoIncrement(boolean autoIncrement) {
+    public PrimaryIntegerColumnConfig<T> autoIncrement(boolean autoIncrement) {
         this.autoIncrement = autoIncrement;
         return this;
     }
 
-    public ColumnConfig<T> autoIncrement() {
+    public PrimaryIntegerColumnConfig<T> autoIncrement() {
         return autoIncrement(true);
     }
 
-    public ColumnConfig<T> columnType(PrimaryIntegerTypeDefinition type) {
+    public PrimaryIntegerColumnConfig<T> columnType(PrimaryIntegerTypeDefinition type) {
         this.typeDefinition = type;
         return this;
     }

@@ -11,7 +11,7 @@ public class PrimaryGenericColumnConfig<T> extends ColumnConfig<T> {
         this.nullable = false;
     }
 
-    public ColumnConfig<T> columnType(PrimaryGenericTypeDefinition type) {
+    public PrimaryGenericColumnConfig<T> columnType(PrimaryGenericTypeDefinition type) {
         this.typeDefinition = type;
         return this;
     }

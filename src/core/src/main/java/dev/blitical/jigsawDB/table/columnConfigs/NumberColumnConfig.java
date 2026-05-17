@@ -20,7 +20,7 @@ public class NumberColumnConfig<T> extends ColumnConfig<T> {
         return this;
     }
 
-    public ColumnConfig<T> columnType(NumberTypeDefinition type) {
+    public NumberColumnConfig<T> columnType(NumberTypeDefinition type) {
         this.typeDefinition = type;
         return this;
     }
