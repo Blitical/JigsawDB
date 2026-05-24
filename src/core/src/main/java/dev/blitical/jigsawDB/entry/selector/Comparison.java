@@ -9,8 +9,6 @@ import dev.blitical.jigsawDB.entry.selector.util.ComparisonType;
 import dev.blitical.jigsawDB.table.Table;
 import org.jetbrains.annotations.CheckReturnValue;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public final class Comparison<T extends Table<T, P>, P, V> {
@@ -60,11 +58,8 @@ public final class Comparison<T extends Table<T, P>, P, V> {
 
     @SafeVarargs
     @CheckReturnValue
-    public final WhereSelector<T, P> in(V value, V... values) {
-        Set<V> set = new HashSet<>();
-        set.add(value);
-        set.addAll(List.of(values));
-        Set<V> immutable = Set.copyOf(set);
+    public final WhereSelector<T, P> in(V... values) {
+        Set<V> immutable = Set.of(values);
         selector.addCondition(
                 type,
                 new InCondition<>(field, immutable)
