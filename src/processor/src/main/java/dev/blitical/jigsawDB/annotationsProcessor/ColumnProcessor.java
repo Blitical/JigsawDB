@@ -3,6 +3,8 @@ package dev.blitical.jigsawDB.annotationsProcessor;
 import com.google.auto.service.AutoService;
 import dev.blitical.jigsawDB.annotations.Column;
 import dev.blitical.jigsawDB.annotations.PrimaryColumn;
+import dev.blitical.jigsawDB.encoder.EncodedType;
+import dev.blitical.jigsawDB.encoder.Encoder;
 import dev.blitical.jigsawDB.exceptions.compile.DuplicatePrimaryColumnException;
 import dev.blitical.jigsawDB.exceptions.compile.MisusedAnnotationException;
 import dev.blitical.jigsawDB.exceptions.compile.NoPrimaryColumnException;
@@ -142,7 +144,8 @@ public final class ColumnProcessor extends AbstractProcessor {
             }
 
             String column = f.getAnnotation(Column.class).value();
-            String fieldType = getFieldType(type, isPrimaryColumn);
+            EncodedType encodedType = Encoder.resolveParseType(f, types, elements).type;
+            String fieldType = getFieldType(type, encodedType, isPrimaryColumn);
 
             // public static final <TYPE>Field<CLASS, TYPE> VARIABLE = new Field<>("COLUMN");
             sb.append("    public static final ")
@@ -171,7 +174,12 @@ public final class ColumnProcessor extends AbstractProcessor {
         write(pkg + "." + className, sb.toString(), entry);
     }
 
-    private static String getFieldType(String type, boolean isPrimaryColumn) {
+    private static String getFieldType(String type, EncodedType encodedType, boolean isPrimaryColumn) {
+        switch (encodedType) {
+            case INTEGER -> type = makeNonPrimitive("int");
+            case REAL -> type = makeNonPrimitive("double");
+            case BLOB -> type = makeNonPrimitive("byte[]");
+        }
         String fieldType = switch (type) {
             case "java.lang.Integer" ->
                     isPrimaryColumn ? "Integer" : "Number"; // PrimaryIntegerField<>() OR NumberField<>()

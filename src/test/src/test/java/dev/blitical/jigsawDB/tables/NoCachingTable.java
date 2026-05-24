@@ -66,6 +66,9 @@ public class NoCachingTable extends Table<NoCachingTable, UUID> {
     protected void configure(TableConfig<NoCachingTable> config) {
         config.cachePolicy(CachePolicy.NONE());
 
+        config.column(NoCachingTableFields.testEnumOrdinal)
+                .columnType(ColumnTypes.integer());
+
         config.column(NoCachingTableFields.image)
                 .columnType(ColumnTypes.mediumBlob());
 

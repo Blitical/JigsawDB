@@ -50,11 +50,7 @@ public final class ParseTypeProcessor extends AbstractProcessor {
             return;
 
         TypeMirror type = e.asType();
-        CheckContext context = new CheckContext(
-                type,
-                e,
-                env
-        );
+        CheckContext context = new CheckContext(type, e, env);
 
         CheckResult result = switch (annotation.value()) {
             case STRING -> checkClasses(context, ParseType.PREDEFINED_TYPES.get(ParseType.STRING));

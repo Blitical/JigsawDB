@@ -5,8 +5,10 @@ import dev.blitical.jigsawDB.encoder.encoderTypes.*;
 import dev.blitical.jigsawDB.table.Table;
 
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Element;
+import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -47,6 +49,52 @@ public final class Encoder {
             for (Class<?> clazz : entry.getValue()) {
                 if (clazz.isAssignableFrom(typeClass))
                     return entry.getKey();
+            }
+        }
+
+        return ParseType.JSON;
+    }
+
+    public static ParseType resolveParseType(VariableElement field, Types types, Elements elements) {
+        if (field == null) return null;
+        Parse fieldParse = field.getAnnotation(Parse.class);
+        if (fieldParse != null) {
+            return fieldParse.value();
+        }
+
+        TypeMirror type = field.asType();
+        for (AnnotationMirror am : type.getAnnotationMirrors()) {
+            if (am.getAnnotationType().toString().equals(Parse.class.getName())) {
+                return fieldParse.value();
+            }
+        }
+
+        TypeMirror erased = types.erasure(type);
+        Element element = types.asElement(erased);
+        if (element instanceof TypeElement te) {
+            if (te.getKind() == ElementKind.ENUM) {
+                return ParseType.ENUM_STRING;
+            }
+
+            if (te.getQualifiedName().toString().equals("java.util.UUID")) {
+                return ParseType.UUID_STRING;
+            }
+
+            Parse classParse = te.getAnnotation(Parse.class);
+            if (classParse != null) {
+                return classParse.value();
+            }
+
+            for (Map.Entry<ParseType, Class<?>[]> entry : PREDEFINED_TYPES.entrySet()) {
+                for (Class<?> clazz : entry.getValue()) {
+                    TypeElement target = elements.getTypeElement(clazz.getCanonicalName());
+                    if (target == null) continue;
+                    TypeMirror targetType = target.asType();
+
+                    if (types.isAssignable(erased, targetType)) {
+                        return entry.getKey();
+                    }
+                }
             }
         }
 
