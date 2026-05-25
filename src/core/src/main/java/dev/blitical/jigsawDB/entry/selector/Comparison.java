@@ -3,6 +3,7 @@ package dev.blitical.jigsawDB.entry.selector;
 import dev.blitical.jigsawDB.entry.fields.GenericField;
 import dev.blitical.jigsawDB.entry.selector.condition.Condition.NodeType;
 import dev.blitical.jigsawDB.entry.selector.condition.ConditionManager.ComparisonCondition;
+import dev.blitical.jigsawDB.entry.selector.condition.ConditionManager.CustomCondition;
 import dev.blitical.jigsawDB.entry.selector.condition.ConditionManager.InCondition;
 import dev.blitical.jigsawDB.entry.selector.condition.ConditionManager.LikeCondition;
 import dev.blitical.jigsawDB.entry.selector.util.ComparisonType;
@@ -10,6 +11,7 @@ import dev.blitical.jigsawDB.table.Table;
 import org.jetbrains.annotations.CheckReturnValue;
 
 import java.util.Set;
+import java.util.function.Function;
 
 public final class Comparison<T extends Table<T, P>, P, V> {
 
@@ -63,6 +65,15 @@ public final class Comparison<T extends Table<T, P>, P, V> {
         selector.addCondition(
                 type,
                 new InCondition<>(field, immutable)
+        );
+        return selector;
+    }
+
+    @CheckReturnValue
+    public final WhereSelector<T, P> custom(Function<String, String> sqlFunction) {
+        selector.addCondition(
+                type,
+                new CustomCondition<>(field, sqlFunction)
         );
         return selector;
     }

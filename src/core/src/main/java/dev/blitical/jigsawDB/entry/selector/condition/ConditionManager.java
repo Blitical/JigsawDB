@@ -10,11 +10,11 @@ import dev.blitical.jigsawDB.table.Table;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public class ConditionManager {
 
     public static class ComparisonCondition<T extends Table<T, ?>, E> extends Condition<T> {
-
         public final GenericField<T, E> field;
         public final ComparisonType type;
         public final E value;
@@ -28,7 +28,6 @@ public class ConditionManager {
     }
 
     public static class NumberComparisonCondition<T extends Table<T, ?>, E> extends Condition<T> {
-
         public final NumberField<T, E> field;
         public final NumberComparisonType type;
         public final E value;
@@ -42,7 +41,6 @@ public class ConditionManager {
     }
 
     public static class BetweenCondition<T extends Table<T, ?>, E> extends Condition<T> {
-
         public final NumberField<T, E> field;
         public final E min;
         public final E max;
@@ -56,7 +54,6 @@ public class ConditionManager {
     }
 
     public static class LikeCondition<T extends Table<T, ?>, E> extends Condition<T> {
-
         public final GenericField<T, E> field;
         public final String match;
 
@@ -68,7 +65,6 @@ public class ConditionManager {
     }
 
     public static class InCondition<T extends Table<T, ?>, E> extends Condition<T> {
-
         public final Field<T, E> field;
         public final Set<E> values;
 
@@ -87,8 +83,24 @@ public class ConditionManager {
         }
     }
 
-    public static class LogicalCondition<T extends Table<T, ?>> extends Condition<T> {
+    public static class CustomCondition<T extends Table<T, ?>, E> extends Condition<T> {
+        public final Field<T, E> field;
+        public final Function<String, String> sqlFunction;
 
+        public CustomCondition(GenericField<T, E> field, Function<String, String> sqlFunction) {
+            super();
+            this.field = field;
+            this.sqlFunction = sqlFunction;
+        }
+
+        public CustomCondition(NumberField<T, E> field, Function<String, String> sqlFunction) {
+            super();
+            this.field = field;
+            this.sqlFunction = sqlFunction;
+        }
+    }
+
+    public static class LogicalCondition<T extends Table<T, ?>> extends Condition<T> {
         public final List<Condition<T>> children = new ArrayList<>();
 
         public LogicalCondition(NodeType type) {

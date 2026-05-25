@@ -351,6 +351,9 @@ public abstract class Base extends Driver {
                         objects.addAll(c.values);
                         yield c.field.name() + " IN (" + placeholders + ")";
                     }
+                    case ConditionManager.CustomCondition<?, ?> c -> {
+                        yield c.sqlFunction.apply(c.field.name());
+                    }
                     default -> throw new IllegalStateException("Invalid ComparisonType: " + condition.getClass());
                 }
             }
