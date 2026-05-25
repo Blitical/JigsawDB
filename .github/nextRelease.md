@@ -1,8 +1,7 @@
-# JigsawDB v1.0.0-beta.17
+# JigsawDB {VERSION}
 
-Minor bug fixes
+{SUMMARY}
 
 ## Changelog
 
-- Add NotNull checks for cache
-- Fix bug where CustomCondition did not provide arguments correctly
+- {...}
