@@ -161,7 +161,7 @@ public abstract class Base extends Driver {
                     rs.next();
                     return (P) rs.getObject(1);
                 },
-                ps -> JigsawDBAction.prepare(ps, args.toArray()),
+                ps -> JigsawDBAction.prepare(ps, objects.toArray()),
                 Statement.RETURN_GENERATED_KEYS
         );
     }

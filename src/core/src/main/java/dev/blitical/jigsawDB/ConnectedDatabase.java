@@ -351,7 +351,7 @@ public class ConnectedDatabase {
                             : initialValuesBuilder.apply(new InitialValueExecutor<>(exposed)).values();
 
                     table.getConfig().columns().forEach((f, c) -> {
-                        var defaultValue = c.asDefinedConfig().supplierConstant() ? c.asDefinedConfig().defaultSupplier().get() : null;
+                        var defaultValue = c.asDefinedConfig().defaultSupplier().get();
                         if (defaultValue != null) {
                             values.add(
                                     new FieldEntry<>(
@@ -383,7 +383,7 @@ public class ConnectedDatabase {
                     }
 
                     table.getConfig().columns().forEach((f, c) -> {
-                        var defaultValue = c.asDefinedConfig().supplierConstant() ? c.asDefinedConfig().defaultSupplier().get() : null;
+                        var defaultValue = c.asDefinedConfig().defaultSupplier().get();
                         if (defaultValue != null) {
                             CacheHandler.putCachedValue(
                                     exposed,
