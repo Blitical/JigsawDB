@@ -70,10 +70,10 @@ public final class Comparison<T extends Table<T, P>, P, V> {
     }
 
     @CheckReturnValue
-    public final WhereSelector<T, P> custom(Function<String, String> sqlFunction) {
+    public final WhereSelector<T, P> custom(Function<String, String> sqlFunction, Object... args) {
         selector.addCondition(
                 type,
-                new CustomCondition<>(field, sqlFunction)
+                new CustomCondition<>(field, sqlFunction, args)
         );
         return selector;
     }

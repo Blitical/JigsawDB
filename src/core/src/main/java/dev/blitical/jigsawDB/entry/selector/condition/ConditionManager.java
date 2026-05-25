@@ -84,19 +84,33 @@ public class ConditionManager {
     }
 
     public static class CustomCondition<T extends Table<T, ?>, E> extends Condition<T> {
-        public final Field<T, E> field;
-        public final Function<String, String> sqlFunction;
+        public final String sql;
+        public final Object[] args;
 
-        public CustomCondition(GenericField<T, E> field, Function<String, String> sqlFunction) {
+        public CustomCondition(GenericField<T, E> field, Function<String, String> sqlFunction, Object[] args) {
             super();
-            this.field = field;
-            this.sqlFunction = sqlFunction;
+            this.sql = sqlFunction.apply(field.name());
+            this.args = args;
+            checkArgs();
         }
 
-        public CustomCondition(NumberField<T, E> field, Function<String, String> sqlFunction) {
+        public CustomCondition(NumberField<T, E> field, Function<String, String> sqlFunction, Object[] args) {
             super();
-            this.field = field;
-            this.sqlFunction = sqlFunction;
+            this.sql = sqlFunction.apply(field.name());
+            this.args = args;
+            checkArgs();
+        }
+
+        private void checkArgs() {
+            int count = 0;
+            for (int i = 0; i < sql.length(); i++) {
+                if (sql.charAt(i) == '?') {
+                    count++;
+                }
+            }
+            if (count != args.length) {
+                throw new IllegalArgumentException("The number of arguments (?) must equal (exactly) the amount of arguments provided");
+            }
         }
     }
 
