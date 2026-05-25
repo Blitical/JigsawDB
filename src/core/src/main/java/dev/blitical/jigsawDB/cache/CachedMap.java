@@ -7,6 +7,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CachedMap {
 
@@ -18,7 +20,7 @@ public class CachedMap {
                     Map<Object, // Entry Primary Key
                             Map<String, // Column id
                                     CachedValue<?> // Value
-                                    >>>> cache = new HashMap<>();
+                                    >>>> cache = new ConcurrentHashMap<>();
     // ^^^ If you want to complain about this, please do
     // I'm sorry for your poor eyes which have to read this abomination
 
@@ -66,9 +68,12 @@ public class CachedMap {
             Field<T, V> field,
             CachedValue<V> value
     ) {
-        cache.computeIfAbsent(databaseId, d -> new HashMap<>())
-                .computeIfAbsent(table.getTableName(), t -> new HashMap<>())
-                .computeIfAbsent(primaryKey, e -> new HashMap<>())
+        Objects.requireNonNull(primaryKey);
+        Objects.requireNonNull(field);
+        Objects.requireNonNull(field.name());
+        cache.computeIfAbsent(databaseId, d -> new ConcurrentHashMap<>())
+                .computeIfAbsent(table.getTableName(), t -> new ConcurrentHashMap<>())
+                .computeIfAbsent(primaryKey, e -> new ConcurrentHashMap<>())
                 .put(field.name(), value);
     }
 
@@ -177,7 +182,7 @@ public class CachedMap {
             Table<T, ?> table,
             boolean stored
     ) {
-        allEntryTracker.computeIfAbsent(databaseId, d -> new HashMap<>())
+        allEntryTracker.computeIfAbsent(databaseId, d -> new ConcurrentHashMap<>())
                 .put(table.getTableName(), stored);
     }
 
