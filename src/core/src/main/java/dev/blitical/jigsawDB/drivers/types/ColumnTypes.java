@@ -12,28 +12,67 @@ public class ColumnTypes {
             DriverType.MySQL, DriverType.MariaDB
     };
 
+    private static final PrimaryIntegerTypeDefinition INTEGER =
+            new PrimaryIntegerTypeDefinition(TypeSpec.INTEGER, null, null, null, ALL);
+    private static final PrimaryIntegerTypeDefinition TINYINT =
+            new PrimaryIntegerTypeDefinition(TypeSpec.TINYINT, null, null, null, ALL);
+    private static final PrimaryIntegerTypeDefinition SMALLINT =
+            new PrimaryIntegerTypeDefinition(TypeSpec.SMALLINT, null, null, null, ALL);
+    private static final PrimaryIntegerTypeDefinition MEDIUMINT =
+            new PrimaryIntegerTypeDefinition(TypeSpec.MEDIUMINT, null, null, null, ALL);
+    private static final PrimaryIntegerTypeDefinition BIGINT =
+            new PrimaryIntegerTypeDefinition(TypeSpec.BIGINT, null, null, null, ALL);
+    private static final NumberTypeDefinition FLOAT =
+            new NumberTypeDefinition(TypeSpec.FLOAT, null, null, null, ALL);
+    private static final NumberTypeDefinition DOUBLE =
+            new NumberTypeDefinition(TypeSpec.DOUBLE, null, null, null, ALL);
+    private static final GenericTypeDefinition TINYTEXT =
+            new GenericTypeDefinition(TypeSpec.TINYTEXT, null, null, null, MY_SQL_LIKE);
+    private static final GenericTypeDefinition TEXT =
+            new GenericTypeDefinition(TypeSpec.TEXT, null, null, null, ALL);
+    private static final GenericTypeDefinition MEDIUMTEXT =
+            new GenericTypeDefinition(TypeSpec.MEDIUMTEXT, null, null, null, MY_SQL_LIKE);
+    private static final GenericTypeDefinition LONGTEXT =
+            new GenericTypeDefinition(TypeSpec.LONGTEXT, null, null, null, MY_SQL_LIKE);
+    private static final BinaryTypeDefinition BLOB =
+            new BinaryTypeDefinition(TypeSpec.BLOB, null, null, null, ALL);
+    private static final BinaryTypeDefinition TINYBLOB =
+            new BinaryTypeDefinition(TypeSpec.TINYBLOB, null, null, null, MY_SQL_LIKE);
+    private static final BinaryTypeDefinition MEDIUMBLOB =
+            new BinaryTypeDefinition(TypeSpec.MEDIUMBLOB, null, null, null, MY_SQL_LIKE);
+    private static final BinaryTypeDefinition LONGBLOB =
+            new BinaryTypeDefinition(TypeSpec.LONGBLOB, null, null, null, MY_SQL_LIKE);
+    private static final GenericTypeDefinition BOOLEAN =
+            new GenericTypeDefinition(TypeSpec.BOOLEAN, null, null, null, ALL);
+    private static final BinaryTypeDefinition BIT =
+            new BinaryTypeDefinition(TypeSpec.BIT, null, null, null, ALL);
+    private static final GenericTypeDefinition JSON =
+            new GenericTypeDefinition(TypeSpec.JSON, null, null, null, ALL);
+    private static final GenericTypeDefinition UUID =
+            new GenericTypeDefinition(TypeSpec.UUID, null, null, null, ALL);
+
     /*
      * Integer types
      */
 
     public static PrimaryIntegerTypeDefinition integer() {
-        return new PrimaryIntegerTypeDefinition(TypeSpec.INTEGER, null, null, null, ALL);
+        return INTEGER;
     }
 
     public static PrimaryIntegerTypeDefinition tinyint() {
-        return new PrimaryIntegerTypeDefinition(TypeSpec.TINYINT, null, null, null, ALL);
+        return TINYINT;
     }
 
     public static PrimaryIntegerTypeDefinition smallint() {
-        return new PrimaryIntegerTypeDefinition(TypeSpec.SMALLINT, null, null, null, ALL);
+        return SMALLINT;
     }
 
     public static PrimaryIntegerTypeDefinition mediumint() {
-        return new PrimaryIntegerTypeDefinition(TypeSpec.MEDIUMINT, null, null, null, ALL);
+        return MEDIUMINT;
     }
 
     public static PrimaryIntegerTypeDefinition bigint() {
-        return new PrimaryIntegerTypeDefinition(TypeSpec.BIGINT, null, null, null, ALL);
+        return BIGINT;
     }
 
     /*
@@ -53,11 +92,11 @@ public class ColumnTypes {
      */
 
     public static NumberTypeDefinition floatType() {
-        return new NumberTypeDefinition(TypeSpec.FLOAT, null, null, null, ALL);
+        return FLOAT;
     }
 
     public static NumberTypeDefinition doubleType() {
-        return new NumberTypeDefinition(TypeSpec.DOUBLE, null, null, null, ALL);
+        return DOUBLE;
     }
 
     /*
@@ -77,19 +116,19 @@ public class ColumnTypes {
      */
 
     public static GenericTypeDefinition tinyText() {
-        return new GenericTypeDefinition(TypeSpec.TINYTEXT, null, null, null, MY_SQL_LIKE);
+        return TINYTEXT;
     }
 
     public static GenericTypeDefinition text() {
-        return new GenericTypeDefinition(TypeSpec.TEXT, null, null, null, ALL);
+        return TEXT;
     }
 
     public static GenericTypeDefinition mediumText() {
-        return new GenericTypeDefinition(TypeSpec.MEDIUMTEXT, null, null, null, MY_SQL_LIKE);
+        return MEDIUMTEXT;
     }
 
     public static GenericTypeDefinition longText() {
-        return new GenericTypeDefinition(TypeSpec.LONGTEXT, null, null, null, MY_SQL_LIKE);
+        return LONGTEXT;
     }
 
     /*
@@ -97,19 +136,19 @@ public class ColumnTypes {
      */
 
     public static BinaryTypeDefinition blob() {
-        return new BinaryTypeDefinition(TypeSpec.BLOB, null, null, null, ALL);
+        return BLOB;
     }
 
     public static BinaryTypeDefinition tinyBlob() {
-        return new BinaryTypeDefinition(TypeSpec.TINYBLOB, null, null, null, MY_SQL_LIKE);
+        return TINYBLOB;
     }
 
     public static BinaryTypeDefinition mediumBlob() {
-        return new BinaryTypeDefinition(TypeSpec.MEDIUMBLOB, null, null, null, MY_SQL_LIKE);
+        return MEDIUMBLOB;
     }
 
     public static BinaryTypeDefinition longBlob() {
-        return new BinaryTypeDefinition(TypeSpec.LONGBLOB, null, null, null, MY_SQL_LIKE);
+        return LONGBLOB;
     }
 
     /*
@@ -129,11 +168,11 @@ public class ColumnTypes {
      */
 
     public static GenericTypeDefinition bool() {
-        return new GenericTypeDefinition(TypeSpec.BOOLEAN, null, null, null, ALL);
+        return BOOLEAN;
     }
 
     public static BinaryTypeDefinition bit() {
-        return new BinaryTypeDefinition(TypeSpec.BIT, null, null, null, ALL);
+        return BIT;
     }
 
     /*
@@ -141,10 +180,10 @@ public class ColumnTypes {
      */
 
     public static GenericTypeDefinition json() {
-        return new GenericTypeDefinition(TypeSpec.JSON, null, null, null, ALL);
+        return JSON;
     }
 
     public static GenericTypeDefinition uuid() {
-        return new GenericTypeDefinition(TypeSpec.UUID, null, null, null, ALL);
+        return UUID;
     }
 }

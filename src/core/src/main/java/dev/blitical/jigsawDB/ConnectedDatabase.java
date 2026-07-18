@@ -177,11 +177,15 @@ public class ConnectedDatabase {
                 primaryKeyCount += 1;
             }
 
+            Object defaultValue = columnConfig.supplierConstant()
+                    ? columnConfig.defaultSupplier().get()
+                    : null;
+
             predefinedColumns.add(new PredefinedColumn(
                     field.getAnnotation(Column.class).value(),
                     field,
-                    columnConfig.supplierConstant() ? columnConfig.defaultSupplier().get() : null,
-                    formatDefault(field, columnConfig),
+                    defaultValue,
+                    formatDefault(field, defaultValue),
                     columnConfig.nullable(),
                     columnConfig.unique(),
                     columnConfig.autoIncrement(),
@@ -204,8 +208,7 @@ public class ConnectedDatabase {
         );
     }
 
-    private <T> String formatDefault(Field field, DefinedColumnConfig<T> columnConfig) {
-        T defaultValue = columnConfig.supplierConstant() ? columnConfig.defaultSupplier().get() : null;
+    private String formatDefault(Field field, Object defaultValue) {
         if (defaultValue == null) return "NULL";
 
         return switch (Encoder.resolveParseType(field)) {
@@ -343,7 +346,7 @@ public class ConnectedDatabase {
                         }
                     }
 
-                    List<FieldEntry<T, ?, ?>> values = new ArrayList<>();
+                    Map<dev.blitical.jigsawDB.entry.Field<T, ?>, Object> valuesByField = new LinkedHashMap<>();
 
                     Map<String, InitialValueExecutor.InitialValue<T, ?>> initialValues
                             = initialValuesBuilder == null
@@ -353,27 +356,24 @@ public class ConnectedDatabase {
                     table.getConfig().columns().forEach((f, c) -> {
                         var defaultValue = c.asDefinedConfig().defaultSupplier().get();
                         if (defaultValue != null) {
-                            values.add(
-                                    new FieldEntry<>(
-                                            table,
-                                            (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
-                                            defaultValue
-                                    )
-                            );
+                            valuesByField.put((dev.blitical.jigsawDB.entry.Field<T, ?>) f, defaultValue);
                         }
                     });
 
                     initialValues.forEach((_, iv) -> {
                         if (iv != null) {
-                            values.add(
-                                    new FieldEntry<>(
-                                            table,
-                                            (dev.blitical.jigsawDB.entry.Field<T, Object>) iv.field(),
-                                            iv.value()
-                                    )
-                            );
+                            valuesByField.put(iv.field(), iv.value());
                         }
                     });
+
+                    List<FieldEntry<T, ?, ?>> values = new ArrayList<>();
+                    valuesByField.forEach((field, val) -> values.add(
+                            new FieldEntry<>(
+                                    table,
+                                    (dev.blitical.jigsawDB.entry.Field<T, Object>) field,
+                                    val
+                            )
+                    ));
 
                     AtomicReference<P> primaryKey = new AtomicReference<>(resolvedId);
                     if (isAutoIncrement) {
@@ -382,27 +382,14 @@ public class ConnectedDatabase {
                         driver.createEntry(table, resolvedId, values).execute(exposed);
                     }
 
-                    table.getConfig().columns().forEach((f, c) -> {
-                        var defaultValue = c.asDefinedConfig().defaultSupplier().get();
-                        if (defaultValue != null) {
+                    valuesByField.forEach((field, val) -> {
+                        if (val != null) {
                             CacheHandler.putCachedValue(
                                     exposed,
                                     table,
                                     primaryKey.get(),
-                                    (dev.blitical.jigsawDB.entry.Field<T, Object>) f,
-                                    defaultValue
-                            );
-                        }
-                    });
-
-                    initialValues.forEach((_, iv) -> {
-                        if (iv != null) {
-                            CacheHandler.putCachedValue(
-                                    exposed,
-                                    table,
-                                    primaryKey.get(),
-                                    (dev.blitical.jigsawDB.entry.Field<T, Object>) iv.field(),
-                                    iv.value()
+                                    (dev.blitical.jigsawDB.entry.Field<T, Object>) field,
+                                    val
                             );
                         }
                     });

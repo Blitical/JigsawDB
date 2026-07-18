@@ -1,138 +1,149 @@
-![banner.png](./quickstart/assets/banner.png)
+![JigsawDB banner](./quickstart/assets/banner.png)
 
 > [!WARNING]
-> **JigsawDB is currently in its public beta release; there may be issues**  
-> If you encounter any issues, please report them in our Discord [here](https://discord.gg/nKAZa796ua)
+> **JigsawDB is currently in public beta.**
+> If you run into issues, please report them in our Discord: https://discord.gg/nKAZa796ua
 
-## What is JigsawDB?
+# JigsawDB
 
-It's a Java package made specifically to reduce the need for string-based SQL.  
-It attempts to validate as much as possible at compile-time, so developers can query and write to their database **with
-confidence**!
+JigsawDB is a Java library for building and executing SQL through a type-safe API. It is designed to reduce hand-written SQL and catch as much table/query misuse as possible at compile time.
 
-<ins>What we handle:</ins>
+## Features
 
-- **Database initialisation**
-    - We use JDBC to let us execute SQL on any database you'd like!
-    - We support SQLite, MySQL, MariaDB, and PostgreSQL
-    - You can change databases anytime by updating one line of code!
-        - It will function the exact same.
-- **Table creation**
-    - Whether you want to delete, add, or even modify a column, we will handle that.
-    - You won't have to execute any "one-time SQL statements".
-        - You don't even have to change any temporary values.
-        - Everything will be done automatically on start-up.
-- **Typesafe querying**
-    - Everything here is typesafe, and our main goal is to make it really difficult to make any type errors.
-    - It's highly configurable and is tested robustly to support many different types.
-- **Caching**
-    - We have a highly customizable caching system to suit all your needs!
-        - Whether you want it disabled to always get the live value, we support that.
-        - Or you want it enabled for blazing-fast queries, that works too.
-- **Data encoding**
-    - We support many different encoding types, including JSON, Enum ordinals/names, timestamps, and even Java class
-      serialisation.
-    - Everything is done automatically, and these encoding types are highly configurable.
-    - You can even request your own encoding types in our Discord [here](https://discord.gg/nKAZa796ua) (or contribute
-      your own in a PR)
-- **Bucketing**
-    - We have support for buckets and batch executions so your database won't get bombarded with requests.
-- **Building & executing SQL**
-    - Lastly and most importantly, actually reliably parsing and executing SQL.
-    - Our main focus is to eliminate developers' need to write any SQL, allowing them to query and write to their
-      databases **with confidence**!
+- **Database initialization** for SQLite, MySQL, MariaDB, and PostgreSQL through JDBC drivers.
+- **Automatic table creation and migration** for added, removed, and modified columns.
+- **Type-safe querying** through generated field classes.
+- **Configurable caching** with eager, lazy, disabled, mapped, and field-specific policies.
+- **Data encoding** for JSON, enums, timestamps, UUIDs, Java serialization, binary values, and common primitive types.
+- **Buckets and queued execution** for batching database work.
 
-## Quickstart guide
+## Installation
 
-JigsawDB is published on MavenCentral:<br>
-<table>
-  <tr>
-    <th><b>Maven</b></th>
-    <th><a href="./quickstart/gradle.quickstart.md">Gradle</a></th>
-    <th><a href="./quickstart/gradle.kts.quickstart.md">Gradle (kts)</a></th>
-  </tr>
-  <tr>
-    <td colspan="3">
-      *Maven already includes MavenCentral by default*
-    </td>
-  </tr>
-</table>
-And can easily be installed as a dependency with:<br>
-<table>
-  <tr>
-    <th><b>Maven</b></th>
-    <th><a href="./quickstart/gradle.quickstart.md">Gradle</a></th>
-    <th><a href="./quickstart/gradle.kts.quickstart.md">Gradle (kts)</a></th>
-  </tr>
-  <tr>
-    <td colspan="3">
-      <pre lang="xml"><code>&lt;dependencies&gt;
-  &lt;dependency&gt;
-      &lt;groupId&gt;dev.blitical&lt;/groupId&gt;
-      &lt;artifactId&gt;JigsawDB&lt;/artifactId&gt;
-      &lt;version&gt;<!--VERSION-->1.0.0-beta.17<!--END_VERSION-->&lt;/version&gt;
-  &lt;/dependency&gt;
-  &lt;dependency&gt;
-    &lt;groupId&gt;dev.blitical&lt;/groupId&gt;
-    &lt;artifactId&gt;JigsawDB&lt;/artifactId&gt;
-    &lt;version&gt;<!--VERSION-->1.0.0-beta.17<!--END_VERSION-->&lt;/version&gt;
-    &lt;scope&gt;provided&lt;/scope&gt;
-  &lt;/dependency&gt;
-&lt;/dependencies&gt;</code></pre>
-    </td>
-  </tr>
-</table>
+JigsawDB is published on Maven Central.
 
-<br>And to use it, simply create a new Table:
+For Gradle examples, see:
+
+- [Gradle](./quickstart/gradle.quickstart.md)
+- [Gradle Kotlin DSL](./quickstart/gradle.kts.quickstart.md)
+
+### Maven
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>dev.blitical</groupId>
+        <artifactId>JigsawDB</artifactId>
+        <version><!--VERSION-->1.0.0-beta.17<!--END_VERSION--></version>
+    </dependency>
+</dependencies>
+```
+
+If your Maven build does not automatically discover annotation processors from dependencies, add JigsawDB to `maven-compiler-plugin` annotation processor paths as well.
+
+## Database Providers
+
+JigsawDB does not bundle JDBC database providers in its ShadowJar. Install the provider for whichever database you use.
+
+### SQLite
+
+```xml
+<dependency>
+    <groupId>org.xerial</groupId>
+    <artifactId>sqlite-jdbc</artifactId>
+    <version>3.53.2.0</version>
+</dependency>
+```
+
+### MySQL
+
+```xml
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>9.7.0</version>
+</dependency>
+```
+
+### MariaDB
+
+```xml
+<dependency>
+    <groupId>org.mariadb.jdbc</groupId>
+    <artifactId>mariadb-java-client</artifactId>
+    <version>3.5.9</version>
+</dependency>
+```
+
+### PostgreSQL
+
+```xml
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <version>42.7.13</version>
+</dependency>
+```
+
+## Quickstart
+
+Create a table by extending `Table<YOUR_TABLE, PRIMARY_KEY_TYPE>`:
 
 ```java
-// Define it as a table by ensuring it extends Table<YOUR_CLASS, PRIMARY_FIELD_TYPE>
-public class JigsawDBTable extends Table<JigsawDBTable, UUID> {
-    // There can only be one primary column, annotate it with @PrimaryColumn
-    @PrimaryColumn
-    @Column("UUID")
-    UUID UUID;
+import dev.blitical.jigsawDB.annotations.Column;
+import dev.blitical.jigsawDB.annotations.PrimaryColumn;
+import dev.blitical.jigsawDB.table.Table;
 
-    // Add as many additional columns as needed
+import java.util.UUID;
+
+public class MessageTable extends Table<MessageTable, UUID> {
+    @PrimaryColumn
+    @Column("uuid")
+    UUID uuid;
+
     @Column("message")
     String message;
 }
 ```
 
-And connect to it with a database driver:
+Connect to the database and register the table:
 
 ```java
-public static final ConnectedDatabase DATABASE =
-        new DatabaseBuilder(new SQLiteDriver("./myDatabase.sqlite"))
-                .addTable(new JigsawDBTable()) // Add your table here
-                .connect() // And connect with it
-                .complete();
-```
+import dev.blitical.jigsawDB.ConnectedDatabase;
+import dev.blitical.jigsawDB.DatabaseBuilder;
+import dev.blitical.jigsawDB.drivers.SQLiteDriver;
 
-And now you can execute queries with ease:
-
-```java
-public static void main(String[] args) {
-    // entry is never null as we are creating it if it doesn't exist
-    var entry = DATABASE.getOrCreateEntry(JigsawDBTable.class, UUID.randomUUID()).complete();
-    // Set the value of message to "Hello World!"
-    // JigsawDBTableFields is a generated class; you may need to run your repository to be able to use it
-    entry.set(JigsawDBTableFields.message, "Hello World!").complete(); // #complete() is thread-blocking
-    // Get the value of string asynchronously and queue the result to be logged once received
-    entry.get(JigsawDBTableFields.string).queue(result -> {
-        System.out.println(result);
-    });
+public final class Database {
+    public static final ConnectedDatabase DATABASE =
+            new DatabaseBuilder(new SQLiteDriver("./messages.sqlite"))
+                    .addTable(new MessageTable())
+                    .connect()
+                    .complete();
 }
 ```
 
-For more information on generated classes (`JigsawDBTableFields`) or the ExecutableFuture queue system (`queue()` and
-`complete()`), please take a read of our wiki [here]()
+Use the generated fields class to query and update values:
+
+```java
+import java.util.UUID;
+
+public static void main(String[] args) {
+    var entry = Database.DATABASE
+            .getOrCreateEntry(MessageTable.class, UUID.randomUUID())
+            .complete();
+
+    entry.set(MessageTableFields.message, "Hello World!").complete();
+
+    entry.get(MessageTableFields.message).queue(System.out::println);
+}
+```
+
+`complete()` blocks until the operation finishes. `queue(...)` schedules the operation and runs the callback once the result is available.
 
 ## License
 
-JigsawDB is licensed under [GPL v3.0 license](./LICENSE).
+JigsawDB is licensed under the [GPL v3.0 license](./LICENSE).
 
-```
+```text
 Copyright Blitical 2026
 
 Licensed under GNU GENERAL PUBLIC LICENSE version 3.

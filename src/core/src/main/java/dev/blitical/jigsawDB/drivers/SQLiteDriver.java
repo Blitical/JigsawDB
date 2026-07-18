@@ -73,13 +73,11 @@ public class SQLiteDriver extends Base {
         Path absolute = path.toAbsolutePath().normalize();
         int count = absolute.getNameCount();
         if (count <= 2) {
-            String var4 = absolute.toString();
-            return ".../" + var4.replace("\\", "/");
-        } else {
-            Path lastTwo = absolute.subpath(count - 2, count);
-            String var10000 = lastTwo.toString();
-            return ".../" + var10000.replace("\\", "/");
+            return ".../" + absolute.toString().replace("\\", "/");
         }
+
+        Path lastTwo = absolute.subpath(count - 2, count);
+        return ".../" + lastTwo.toString().replace("\\", "/");
     }
 
 
@@ -87,7 +85,7 @@ public class SQLiteDriver extends Base {
     public <T extends Table<T, ?>> Map<String, ExistingColumn> getExistingColumns(Table<T, ?> tbl) throws SQLException {
         String table = tbl.getTableName();
         Map<String, ExistingColumn> columns = new HashMap<>();
-        try (QueryResult qr = executeGet("PRAGMA table_info(" + table + ")")) {
+        try (QueryResult qr = executeGet("PRAGMA table_info(" + normalize(table) + ")")) {
             ResultSet rs = qr.rs();
             while (rs.next()) {
                 String name = rs.getString("name");

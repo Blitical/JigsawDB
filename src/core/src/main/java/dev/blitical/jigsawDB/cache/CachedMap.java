@@ -12,20 +12,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class CachedMap {
 
-    // Wow- a staircase
-    // (which I should fall down on for writing this disgrace)
-    private final
-    Map<String, // Database id
-            Map<String, // Table id
-                    Map<Object, // Entry Primary Key
-                            Map<String, // Column id
-                                    CachedValue<?> // Value
-                                    >>>> cache = new ConcurrentHashMap<>();
-    // ^^^ If you want to complain about this, please do
-    // I'm sorry for your poor eyes which have to read this abomination
+    private final Map<String, DatabaseCache> cache = new ConcurrentHashMap<>();
 
     // Map of: Database id, <Table id, areAllEntriesStored?>
-    private final Map<String, Map<String, Boolean>> allEntryTracker = new HashMap<>();
+    private final Map<String, Map<String, Boolean>> allEntryTracker = new ConcurrentHashMap<>();
+
+    private static final class DatabaseCache extends ConcurrentHashMap<String, TableCache> {
+    }
+
+    private static final class TableCache extends ConcurrentHashMap<Object, EntryCache> {
+    }
+
+    private static final class EntryCache extends ConcurrentHashMap<String, CachedValue<?>> {
+    }
 
     public static class CachedValue<V> {
         public final V value;
@@ -71,9 +70,9 @@ public class CachedMap {
         Objects.requireNonNull(primaryKey);
         Objects.requireNonNull(field);
         Objects.requireNonNull(field.name());
-        cache.computeIfAbsent(databaseId, d -> new ConcurrentHashMap<>())
-                .computeIfAbsent(table.getTableName(), t -> new ConcurrentHashMap<>())
-                .computeIfAbsent(primaryKey, e -> new ConcurrentHashMap<>())
+        cache.computeIfAbsent(databaseId, _ -> new DatabaseCache())
+                .computeIfAbsent(table.getTableName(), _ -> new TableCache())
+                .computeIfAbsent(primaryKey, _ -> new EntryCache())
                 .put(field.name(), value);
     }
 
@@ -83,15 +82,15 @@ public class CachedMap {
             P primaryKey,
             Field<T, V> field
     ) {
-        var tableMap = cache.get(databaseId);
+        DatabaseCache tableMap = cache.get(databaseId);
         if (tableMap == null)
             return false;
 
-        var entryMap = tableMap.get(table.getTableName());
+        TableCache entryMap = tableMap.get(table.getTableName());
         if (entryMap == null)
             return false;
 
-        var columnMap = entryMap.get(primaryKey);
+        EntryCache columnMap = entryMap.get(primaryKey);
         if (columnMap == null)
             return false;
 
@@ -105,15 +104,15 @@ public class CachedMap {
             P primaryKey,
             Field<T, V> field
     ) {
-        var tableMap = cache.get(databaseId);
+        DatabaseCache tableMap = cache.get(databaseId);
         if (tableMap == null)
             return null;
 
-        var entryMap = tableMap.get(table.getTableName());
+        TableCache entryMap = tableMap.get(table.getTableName());
         if (entryMap == null)
             return null;
 
-        var columnMap = entryMap.get(primaryKey);
+        EntryCache columnMap = entryMap.get(primaryKey);
         if (columnMap == null)
             return null;
 
@@ -129,7 +128,7 @@ public class CachedMap {
             String databaseId,
             Table<T, ?> table
     ) {
-        var tableMap = cache.get(databaseId);
+        DatabaseCache tableMap = cache.get(databaseId);
         if (tableMap == null)
             return;
         tableMap.remove(table.getTableName());
@@ -145,11 +144,11 @@ public class CachedMap {
             Table<T, P> table,
             P primaryKey
     ) {
-        var tableMap = cache.get(databaseId);
+        DatabaseCache tableMap = cache.get(databaseId);
         if (tableMap == null)
             return;
 
-        var entryMap = tableMap.get(table.getTableName());
+        TableCache entryMap = tableMap.get(table.getTableName());
         if (entryMap == null)
             return;
 
@@ -162,15 +161,15 @@ public class CachedMap {
             P primaryKey,
             Field<T, V> field
     ) {
-        var tableMap = cache.get(databaseId);
+        DatabaseCache tableMap = cache.get(databaseId);
         if (tableMap == null)
             return;
 
-        var entryMap = tableMap.get(table.getTableName());
+        TableCache entryMap = tableMap.get(table.getTableName());
         if (entryMap == null)
             return;
 
-        var columnMap = entryMap.get(primaryKey);
+        EntryCache columnMap = entryMap.get(primaryKey);
         if (columnMap == null)
             return;
 
@@ -191,6 +190,6 @@ public class CachedMap {
             T table
     ) {
         var tableMap = allEntryTracker.get(databaseId);
-        return tableMap != null && tableMap.get(table.getTableName());
+        return tableMap != null && Boolean.TRUE.equals(tableMap.get(table.getTableName()));
     }
 }

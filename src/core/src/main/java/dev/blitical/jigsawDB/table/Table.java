@@ -7,16 +7,24 @@ import dev.blitical.jigsawDB.exceptions.compile.NoPrimaryColumnException;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class Table<T extends Table<T, P>, P> {
 
     private final GeneratedTable<?, T> generatedTable;
     private final Set<Field<T, ?>> fields;
+    private final Map<String, Field<T, ?>> fieldsByName;
+    private final Map<String, java.lang.reflect.Field> reflectFieldsByColumn = new ConcurrentHashMap<>();
+    private volatile TableConfig.Exposed<T> config;
+    private volatile Field<T, P> primaryColumn;
+    private volatile String primaryColumnName;
 
     public Table() {
         this.generatedTable = GeneratedTable.newInstance(this);
         this.fields = retrieveAllFields();
+        this.fieldsByName = mapFieldsByName(fields);
     }
 
     public GeneratedTable<?, T> getGeneratedTable() {
@@ -44,27 +52,24 @@ public abstract class Table<T extends Table<T, P>, P> {
     }
 
     public @Nullable java.lang.reflect.Field retrieveColumnReflectField(Field<T, ?> field) {
-        java.lang.reflect.Field[] fields = this.getClass().getDeclaredFields();
-        Set<Field<T, ?>> result = new HashSet<>();
+        return reflectFieldsByColumn.computeIfAbsent(field.name(), this::findReflectFieldByColumnName);
+    }
 
+    private @Nullable java.lang.reflect.Field findReflectFieldByColumnName(String columnName) {
+        java.lang.reflect.Field[] fields = this.getClass().getDeclaredFields();
         for (var f : fields) {
             f.setAccessible(true);
             Column column = f.getAnnotation(Column.class);
             if (column == null) continue;
 
-            if (column.value().equals(field.name()))
+            if (column.value().equals(columnName))
                 return f;
         }
         return null;
     }
 
     public final Field<T, ?> getFieldByName(String name) {
-        for (Field<T, ?> field : getAllFields()) {
-            if (field.name().equals(name)) {
-                return field;
-            }
-        }
-        return null;
+        return fieldsByName.get(name);
     }
 
     public Set<Field<T, ?>> getAllFields() {
@@ -98,6 +103,11 @@ public abstract class Table<T extends Table<T, P>, P> {
 
     @SuppressWarnings("unchecked")
     public final Field<T, P> getPrimaryColumn() {
+        Field<T, P> cachedPrimaryColumn = primaryColumn;
+        if (cachedPrimaryColumn != null) {
+            return cachedPrimaryColumn;
+        }
+
         java.lang.reflect.Field[] fields = this.getClass().getDeclaredFields();
 
         String name = null;
@@ -112,16 +122,22 @@ public abstract class Table<T extends Table<T, P>, P> {
             name = annotation.value();
         }
 
-        for (var field : getAllFields()) {
-            if (field.name().equals(name)) {
-                return (Field<T, P>) field;
-            }
+        Field<T, ?> field = getFieldByName(name);
+        if (field != null) {
+            Field<T, P> resolved = (Field<T, P>) field;
+            primaryColumn = resolved;
+            return resolved;
         }
 
         throw new NoPrimaryColumnException(getTableName());
     }
 
     public final String getPrimaryColumnName() {
+        String cachedPrimaryColumnName = primaryColumnName;
+        if (cachedPrimaryColumnName != null) {
+            return cachedPrimaryColumnName;
+        }
+
         java.lang.reflect.Field[] fields = this.getClass().getDeclaredFields();
 
         for (var field : fields) {
@@ -132,7 +148,8 @@ public abstract class Table<T extends Table<T, P>, P> {
             if (annotation == null)
                 continue;
 
-            return annotation.value();
+            primaryColumnName = annotation.value();
+            return primaryColumnName;
         }
 
         throw new NoPrimaryColumnException(getTableName());
@@ -145,8 +162,23 @@ public abstract class Table<T extends Table<T, P>, P> {
     }
 
     public final TableConfig.Exposed<T> getConfig() {
+        TableConfig.Exposed<T> cachedConfig = config;
+        if (cachedConfig != null) {
+            return cachedConfig;
+        }
+
         TableConfig<T> config = new TableConfig<>(this);
         configure(config);
-        return config.getExposed();
+        TableConfig.Exposed<T> exposed = config.getExposed();
+        this.config = exposed;
+        return exposed;
+    }
+
+    private Map<String, Field<T, ?>> mapFieldsByName(Set<Field<T, ?>> fields) {
+        Map<String, Field<T, ?>> mappedFields = new ConcurrentHashMap<>();
+        for (Field<T, ?> field : fields) {
+            mappedFields.put(field.name(), field);
+        }
+        return Map.copyOf(mappedFields);
     }
 }

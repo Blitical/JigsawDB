@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -78,10 +79,25 @@ public class PostgreSQLDriver extends Base {
         Map<String, ExistingColumn> columns = new HashMap<>();
 
         try (QueryResult qr = executeGet("""
-                SELECT column_name, data_type, is_nullable
-                FROM information_schema.columns
-                WHERE table_catalog = current_database()
-                AND table_name = ?
+                SELECT c.column_name,
+                       c.data_type,
+                       c.is_nullable,
+                       EXISTS (
+                           SELECT 1
+                           FROM information_schema.table_constraints tc
+                           JOIN information_schema.key_column_usage kcu
+                             ON tc.constraint_name = kcu.constraint_name
+                            AND tc.table_schema = kcu.table_schema
+                            AND tc.table_name = kcu.table_name
+                           WHERE tc.constraint_type = 'PRIMARY KEY'
+                             AND tc.table_catalog = c.table_catalog
+                             AND tc.table_schema = c.table_schema
+                             AND tc.table_name = c.table_name
+                             AND kcu.column_name = c.column_name
+                       ) AS primary_key
+                FROM information_schema.columns c
+                WHERE c.table_catalog = current_database()
+                AND c.table_name = ?
                 """, table)) {
             ResultSet rs = qr.rs();
 
@@ -93,7 +109,7 @@ public class PostgreSQLDriver extends Base {
                                 name,
                                 rs.getString("data_type"),
                                 "YES".equals(rs.getString("is_nullable")),
-                                false
+                                rs.getBoolean("primary_key")
                         )
                 );
             }
@@ -152,6 +168,24 @@ public class PostgreSQLDriver extends Base {
             case BINARY, VARBINARY, BLOB, TINYBLOB, MEDIUMBLOB, LONGBLOB -> "BYTEA";
             case BOOLEAN, BIGINT, BIT -> type.type().name();
         };
+    }
+
+    @Override
+    protected <T extends Table<T, ?>> boolean columnTypeMatches(
+            Table<T, ?> table,
+            PredefinedColumn column,
+            ExistingColumn existing
+    ) {
+        String expected = mapType(table, column).toLowerCase(Locale.ROOT);
+        String actual = existing.type().toLowerCase(Locale.ROOT);
+
+        if (expected.startsWith("varchar")) {
+            return actual.equals("character varying") || actual.equals("varchar");
+        }
+        if (expected.startsWith("numeric")) {
+            return actual.equals("numeric") || actual.equals("decimal");
+        }
+        return actual.equals(expected);
     }
 
     @Override

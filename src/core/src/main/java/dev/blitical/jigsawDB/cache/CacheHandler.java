@@ -87,12 +87,14 @@ public final class CacheHandler {
 
         } else if (policy instanceof CachePolicy.MappedCachePolicy<?> mappedCachePolicy) {
             CachePolicy.PolicyMap<?> val = mappedCachePolicy.map.get(field);
-            return val.selector.equals(CachePolicy.Selector.ALL);
+            if (val != null) {
+                return val.selector.equals(CachePolicy.Selector.ALL);
+            }
         }
 
         CachePolicy.StaticCachePolicy databasePolicy = database.cachePolicy();
         if (databasePolicy != null) {
-            return policy.selector.equals(CachePolicy.Selector.ALL);
+            return databasePolicy.selector.equals(CachePolicy.Selector.ALL);
         }
         return true; // Cache by default
     }
@@ -106,7 +108,7 @@ public final class CacheHandler {
 
         if (policy instanceof CachePolicy.MappedCachePolicy<?> mappedCachePolicy) {
             CachePolicy.PolicyMap<?> val = mappedCachePolicy.map.get(field);
-            if (val.maxCalls != -2) return val.maxCalls;
+            if (val != null && val.maxCalls != -2) return val.maxCalls;
         }
         if (policy.maxCalls != -2)
             return policy.maxCalls;
@@ -125,7 +127,7 @@ public final class CacheHandler {
 
         if (policy instanceof CachePolicy.MappedCachePolicy<?> mappedCachePolicy) {
             CachePolicy.PolicyMap<?> val = mappedCachePolicy.map.get(field);
-            if (val.duration != null) return val.duration;
+            if (val != null && val.duration != null) return val.duration;
         }
         if (policy.duration != null)
             return policy.duration;
@@ -144,7 +146,7 @@ public final class CacheHandler {
 
         if (policy instanceof CachePolicy.MappedCachePolicy<?> mappedCachePolicy) {
             CachePolicy.PolicyMap<?> val = mappedCachePolicy.map.get(field);
-            if (val.policy != null) return val.policy;
+            if (val != null && val.policy != null) return val.policy;
         }
         if (policy.policy != null)
             return policy.policy;

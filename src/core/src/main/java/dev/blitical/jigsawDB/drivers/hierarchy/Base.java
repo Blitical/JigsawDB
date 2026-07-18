@@ -291,12 +291,12 @@ public abstract class Base extends Driver {
 
         SQL.append(" FROM ").append(normalize(table.getTableName()));
         if (condition != null) {
-            SQL.append(" WHERE ").append(encodeCondition(condition, objects));
+            SQL.append(" WHERE ").append(encodeCondition(table, condition, objects));
         }
 
         if (!sortBy.isEmpty()) {
             SQL.append(" ORDER BY ").append(sortBy.stream().map(s ->
-                    s.field().name() + " " + (s.type().equals(OrderType.ASCENDING) ? "ASC" : "DESC")
+                    normalize(s.field().name()) + " " + (s.type().equals(OrderType.ASCENDING) ? "ASC" : "DESC")
             ).collect(Collectors.joining(", ")));
         }
 
@@ -319,26 +319,26 @@ public abstract class Base extends Driver {
         }
     }
 
-    protected <T extends Table<T, ?>> String encodeCondition(Condition<T> condition, List<Object> objects) {
+    protected <T extends Table<T, ?>> String encodeCondition(Table<T, ?> table, Condition<T> condition, List<Object> objects) {
         return switch (condition.getType()) {
             case COMPARISON -> {
                 switch (condition) {
                     case ConditionManager.ComparisonCondition<?, ?> c -> {
-                        objects.add(c.value);
-                        yield c.field.name() + " " + mapComparisonType(c.type) + " ?";
+                        objects.add(encodeConditionValue(table, tableCast(c.field), c.value));
+                        yield normalize(c.field.name()) + " " + mapComparisonType(c.type) + " ?";
                     }
                     case ConditionManager.NumberComparisonCondition<?, ?> c -> {
-                        objects.add(c.value);
-                        yield c.field.name() + " " + mapComparisonType(c.type) + " ?";
+                        objects.add(encodeConditionValue(table, tableCast(c.field), c.value));
+                        yield normalize(c.field.name()) + " " + mapComparisonType(c.type) + " ?";
                     }
                     case ConditionManager.BetweenCondition<?, ?> c -> {
-                        objects.add(c.min);
-                        objects.add(c.max);
-                        yield c.field.name() + " BETWEEN ? AND ?";
+                        objects.add(encodeConditionValue(table, tableCast(c.field), c.min));
+                        objects.add(encodeConditionValue(table, tableCast(c.field), c.max));
+                        yield normalize(c.field.name()) + " BETWEEN ? AND ?";
                     }
                     case ConditionManager.LikeCondition<?, ?> c -> {
                         objects.add(c.match);
-                        yield c.field.name() + " LIKE ?";
+                        yield normalize(c.field.name()) + " LIKE ?";
                     }
                     case ConditionManager.InCondition<?, ?> c -> {
                         if (c.values.isEmpty())
@@ -348,8 +348,10 @@ public abstract class Base extends Driver {
                                 .map(v -> "?")
                                 .collect(Collectors.joining(", "));
 
-                        objects.addAll(c.values);
-                        yield c.field.name() + " IN (" + placeholders + ")";
+                        for (Object value : c.values) {
+                            objects.add(encodeConditionValue(table, tableCast(c.field), value));
+                        }
+                        yield normalize(c.field.name()) + " IN (" + placeholders + ")";
                     }
                     case ConditionManager.CustomCondition<?, ?> c -> {
                         objects.addAll(Arrays.asList(c.args));
@@ -366,7 +368,7 @@ public abstract class Base extends Driver {
 
                 String delimiter = condition.getType() == Condition.NodeType.AND ? " AND " : " OR ";
                 String joined = logical.children().stream()
-                        .map(child -> "(" + encodeCondition(child, objects) + ")")
+                        .map(child -> "(" + encodeCondition(table, child, objects) + ")")
                         .collect(Collectors.joining(delimiter));
 
                 yield "(" + joined + ")";
@@ -377,10 +379,21 @@ public abstract class Base extends Driver {
                 if (logical.children().size() != 1)
                     throw new IllegalArgumentException("NOT node must have exactly one child");
 
-                String inner = encodeCondition(logical.children().getFirst(), objects);
+                String inner = encodeCondition(table, logical.children().getFirst(), objects);
                 yield "(NOT " + inner + ")";
             }
         };
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Object encodeConditionValue(Table table, Field field, Object value) {
+        Encoder.EncodedObject encoded = Encoder.encode(value, table, field);
+        return encoded == null ? null : encoded.encoded();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends Table<T, ?>, V> Field<T, V> tableCast(Field<?, ?> field) {
+        return (Field<T, V>) field;
     }
 
     protected String mapComparisonType(Enum<?> type) {
@@ -456,14 +469,13 @@ public abstract class Base extends Driver {
         for (PredefinedColumn column : columns) {
             ExistingColumn c = existingColumns.get(column.name());
             if (c == null) {
-                rebuildTable = true;
-                break;
+                continue;
             }
 
             existingColumns.remove(column.name());
             if (c.primaryKey() != column.primaryKey()
                     || c.nullable() != column.nullable()
-                    || !c.type().equalsIgnoreCase(mapType(table, column))
+                    || !columnTypeMatches(table, column, c)
             ) {
                 rebuildTable = true;
                 break;
@@ -522,7 +534,7 @@ public abstract class Base extends Driver {
                     if (!driverType().equals(DriverType.PostgreSQL))
                         return normalize(c.name());
                     return normalize(c.name()) + "::" + mapType(table, c)
-                            .replaceAll("\\(.\\)", "");
+                            .replaceAll("\\([^)]*\\)", "");
                 })
                 .collect(Collectors.joining(", "));
         return new Action(
@@ -545,6 +557,14 @@ public abstract class Base extends Driver {
 
     protected abstract <T extends Table<T, ?>> String buildCreateSql(Table<T, ?> table, List<PredefinedColumn> columns, String tableName);
     protected abstract <T extends Table<T, ?>> String mapType(Table<T, ?> table, PredefinedColumn column);
+
+    protected <T extends Table<T, ?>> boolean columnTypeMatches(
+            Table<T, ?> table,
+            PredefinedColumn column,
+            ExistingColumn existing
+    ) {
+        return existing.type().equalsIgnoreCase(mapType(table, column));
+    }
 
     public Object getObject(ResultSet rs, String columnName) throws SQLException {
         return rs.getObject(columnName);

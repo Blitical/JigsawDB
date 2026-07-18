@@ -151,6 +151,8 @@ public class CachePolicy<S extends CachePolicy<S>> {
     public S duplicate(CachePolicy<?> policy) {
         this.maxCalls = policy.maxCalls;
         this.policy = policy.policy;
+        this.duration = policy.duration;
+        this.selector = policy.selector;
         return self();
     }
 }

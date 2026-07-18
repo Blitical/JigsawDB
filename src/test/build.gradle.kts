@@ -16,6 +16,11 @@ dependencies {
     implementation(project(":core"))
     annotationProcessor(project(":processor"))
 
+    testRuntimeOnly("org.xerial:sqlite-jdbc:3.53.2.0")
+    testRuntimeOnly("com.mysql:mysql-connector-j:9.7.0")
+    testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.9")
+    testRuntimeOnly("org.postgresql:postgresql:42.7.13")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
     testAnnotationProcessor(project(":processor"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

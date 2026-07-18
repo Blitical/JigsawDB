@@ -133,7 +133,7 @@ public abstract class MySQLikeDriver extends Base {
     @Override
     protected <T extends Table<T, ?>> String buildCreateSql(Table<T, ?> table, List<PredefinedColumn> columns, String tableName) {
         StringBuilder sql = new StringBuilder();
-        sql.append("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" (");
+        sql.append("CREATE TABLE IF NOT EXISTS ").append(normalize(tableName)).append(" (");
         List<String> defs = new ArrayList<>();
 
         for (PredefinedColumn col : columns) {

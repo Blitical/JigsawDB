@@ -33,6 +33,12 @@ tasks.shadowJar {
     archiveClassifier.set("") // removes "-all"
 
     configurations = listOf(project.configurations.shadow.get())
+    exclude(
+        "org/sqlite/**",
+        "com/mysql/**",
+        "org/mariadb/**",
+        "org/postgresql/**"
+    )
     // Not supported in Java 25, UNCOMMENT IF WE EVER DOWNGRADE TO LTS Java 21
     //relocate("com.google.gson", "dev.blitical.jigsawdb.shaded.gson")
     manifest {

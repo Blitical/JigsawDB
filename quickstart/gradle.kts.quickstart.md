@@ -27,6 +27,12 @@ And can easily be installed as a dependency with:<br>
       <pre lang="groovy"><code>dependencies {
     implementation("dev.blitical:JigsawDB:<!--VERSION-->1.0.0-beta.17<!--END_VERSION-->")
     annotationProcessor("dev.blitical:JigsawDB:<!--VERSION-->1.0.0-beta.17<!--END_VERSION-->")
+
+    // Add the JDBC provider you use; JigsawDB does not bundle one.
+    runtimeOnly("org.xerial:sqlite-jdbc:3.53.2.0") // SQLite
+    runtimeOnly("com.mysql:mysql-connector-j:9.7.0") // MySQL
+    runtimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.9") // MariaDB
+    runtimeOnly("org.postgresql:postgresql:42.7.13") // PostgreSQL
 }</code></pre>
     </td>
   </tr>

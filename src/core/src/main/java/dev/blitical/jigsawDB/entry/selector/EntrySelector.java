@@ -100,8 +100,7 @@ public class EntrySelector<T extends Table<T, P>, P> {
                         limit,
                         fields
                 );
-                sortFunction.apply(entries);
-                return entries;
+                return sortFunction.apply(entries);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

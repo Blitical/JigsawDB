@@ -21,7 +21,7 @@ public class QueueManager {
 
         try {
             this.worker.join();
-        } catch (InterruptedException var2) {
+        } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }
 
