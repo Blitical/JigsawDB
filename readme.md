@@ -33,7 +33,7 @@ For Gradle examples, see:
     <dependency>
         <groupId>dev.blitical</groupId>
         <artifactId>JigsawDB</artifactId>
-        <version><!--VERSION-->1.0.0-beta.17<!--END_VERSION--></version>
+        <version><!--VERSION-->1.0.0-beta.18<!--END_VERSION--></version>
     </dependency>
 </dependencies>
 ```
