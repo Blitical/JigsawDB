@@ -16,6 +16,7 @@ public class DatabaseBuilder {
     protected final Map<Class<? extends Table>, Table<?, ?>> shadowTables = new HashMap<>();
 
     protected CachePolicy.StaticCachePolicy cachePolicy = null;
+    protected boolean ignoreInvalidShutdownWarning = false;
 
     public DatabaseBuilder(Driver driver) {
         this.driver = driver;
@@ -31,10 +32,20 @@ public class DatabaseBuilder {
         return this;
     }
 
-    public <T extends Table<T, E>, E> DatabaseBuilder cachePolicy(
+    public DatabaseBuilder cachePolicy(
             CachePolicy.StaticCachePolicy cachePolicy
     ) {
         this.cachePolicy = cachePolicy;
+        return this;
+    }
+
+    public DatabaseBuilder ignoreShutdownWarning() {
+        this.ignoreInvalidShutdownWarning = true;
+        return this;
+    }
+
+    public DatabaseBuilder ignoreShutdownWarning(boolean ignore) {
+        this.ignoreInvalidShutdownWarning = ignore;
         return this;
     }
 

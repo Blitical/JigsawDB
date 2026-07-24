@@ -38,15 +38,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ConnectedDatabase {
     private static final Set<ConnectedDatabase> CONNECTED_DATABASES = ConcurrentHashMap.newKeySet();
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (!CONNECTED_DATABASES.isEmpty()) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ignored) {
+            }
+
+            Set<ConnectedDatabase> outstandingDatabases = CONNECTED_DATABASES.stream()
+                    .filter(db -> !db.ignoreInvalidShutdownWarning)
+                    .collect(Collectors.toUnmodifiableSet());
+
+            if (!outstandingDatabases.isEmpty()) {
                 StringBuilder formatted = new StringBuilder();
-                CONNECTED_DATABASES.forEach((d) -> formatted.append("\n    - ").append(d.driver.formatedName()));
+                outstandingDatabases.forEach((d) -> formatted.append("\n    - ").append(d.driver.formatedName()));
                 JigsawDBLogger.warn("""
                                 You haven't shut down your databases correctly:
                                 ===============================================
@@ -58,7 +68,8 @@ public class ConnectedDatabase {
                                     - Database Locks
                                 -- PLEASE SHUT DOWN YOUR DATABASE CORRECTLY --
                                 Use ConnectedDatabase#awaitShutdown();
-                                See more info at ...
+                                To ignore this warning, use
+                                        DatabaseBuilder#ignoreShutdownWarning();
                                 We will attempt to shutdown these databases now.
                                 ===============================================""",
                         formatted
@@ -85,6 +96,7 @@ public class ConnectedDatabase {
     // This allows other internal classes to use the exposed data
     protected final Exposed exposed;
     private final QueueManagerStore queueManager;
+    private final boolean ignoreInvalidShutdownWarning;
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
 
     public record Exposed(
@@ -134,6 +146,7 @@ public class ConnectedDatabase {
         );
         this.queueManager.set(new QueueManager(exposed));
         this.cachedMap = CacheHandler.getCachedMap(exposed);
+        this.ignoreInvalidShutdownWarning = builder.ignoreInvalidShutdownWarning;
     }
 
     protected ConnectedDatabase connect() {
