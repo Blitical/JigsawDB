@@ -25,8 +25,8 @@ And can easily be installed as a dependency with:<br>
   <tr>
     <td colspan="3">
       <pre lang="groovy"><code>dependencies {
-    implementation "dev.blitical:JigsawDB:<!--VERSION-->1.0.0-beta.18<!--END_VERSION-->"
-    annotationProcessor "dev.blitical:JigsawDB:<!--VERSION-->1.0.0-beta.18<!--END_VERSION-->"
+    implementation "dev.blitical:JigsawDB:<!--VERSION-->1.0.0-beta.19<!--END_VERSION-->"
+    annotationProcessor "dev.blitical:JigsawDB:<!--VERSION-->1.0.0-beta.19<!--END_VERSION-->"
 
     // Add the JDBC provider you use; JigsawDB does not bundle one.
     runtimeOnly "org.xerial:sqlite-jdbc:3.53.2.0" // SQLite

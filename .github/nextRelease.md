@@ -1,7 +1,7 @@
-# JigsawDB v1.0.0-beta.19
+# JigsawDB {VERSION}
 
-Just a quick fix :D
+{SUMMARY}
 
 ## Changelog
 
-- Add a method to ignore the shutdown warning - if you're using the JVM shutdown hook to shutdown the database as well.
+- {...}
