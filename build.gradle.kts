@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.SourceSetContainer
+
 plugins {
     java
     id("com.gradleup.shadow") version "8.3.3"
@@ -9,16 +11,26 @@ group = "dev.blitical"
 version = project.version
 
 allprojects {
+    group = rootProject.group
+    version = rootProject.version
+
     repositories {
         mavenCentral()
     }
 }
 
+val shadedProjects by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+val publishedProjects = listOf(project(":core"), project(":processor"))
+
 dependencies {
-    shadow(project(":core")) {
+    shadedProjects(project(":core")) {
         isTransitive = true
     }
-    shadow(project(":processor")) {
+    shadedProjects(project(":processor")) {
         isTransitive = true
     }
 }
@@ -32,7 +44,7 @@ tasks.shadowJar {
     archiveVersion.set(project.version.toString())
     archiveClassifier.set("") // removes "-all"
 
-    configurations = listOf(project.configurations.shadow.get())
+    configurations = listOf(shadedProjects)
     exclude(
         "org/sqlite/**",
         "com/mysql/**",
@@ -47,6 +59,23 @@ tasks.shadowJar {
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     mergeServiceFiles()
+}
+
+gradle.projectsEvaluated {
+    tasks.named<Jar>("sourcesJar") {
+        publishedProjects.forEach { subproject ->
+            from(subproject.extensions.getByType<SourceSetContainer>()["main"].allSource)
+        }
+    }
+
+    tasks.named<Javadoc>("javadoc") {
+        publishedProjects.forEach { subproject ->
+            val mainSourceSet = subproject.extensions.getByType<SourceSetContainer>()["main"]
+
+            source(mainSourceSet.allJava)
+            classpath += mainSourceSet.compileClasspath
+        }
+    }
 }
 
 mavenPublishing {
@@ -82,10 +111,20 @@ mavenPublishing {
     }
 }
 
+val signingKey = System.getenv("GPG_PRIVATE_KEY")
+val signingPassphrase = System.getenv("GPG_PASSPHRASE")
+
+gradle.taskGraph.whenReady {
+    val publishesToMavenCentral = allTasks.any { it.name.contains("MavenCentral") }
+
+    if (publishesToMavenCentral && signingKey.isNullOrBlank() && !gradle.startParameter.isDryRun) {
+        throw GradleException("GPG_PRIVATE_KEY must be set before publishing to Maven Central.")
+    }
+}
+
 signing {
-    useInMemoryPgpKeys(
-        System.getenv("GPG_PRIVATE_KEY"),
-        System.getenv("GPG_PASSPHRASE")
-    )
-    sign(publishing.publications)
+    if (!signingKey.isNullOrBlank()) {
+        useInMemoryPgpKeys(signingKey, signingPassphrase)
+        sign(publishing.publications)
+    }
 }
