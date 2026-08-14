@@ -1,7 +1,7 @@
-# JigsawDB {VERSION}
+# JigsawDB v1.0.0-beta.20
 
-{SUMMARY}
+fix :)
 
 ## Changelog
 
-- {...}
+- Fix published project not properly resolving in shadowJar instances
