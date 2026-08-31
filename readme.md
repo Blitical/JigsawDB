@@ -1,8 +1,10 @@
 ![JigsawDB banner](./quickstart/assets/banner.png)
 
 > [!WARNING]
-> **JigsawDB is currently in public beta.**
-> If you run into issues, please report them in our Discord: https://discord.gg/nKAZa796ua
+> **JigsawDB is now archived**
+> JigsawDB has been archived and will no longer be maintained.
+> This was a huge learning experience for me, teaching about Annotation Processing (Class Generation), Gradle Sub-Projects, SQL (as a whole), Parameterized classes, and more.
+> I don't regret creating this at all, but I do not plan to work on it given it's tech debt.
 
 # JigsawDB
 
